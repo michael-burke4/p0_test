@@ -1,0 +1,25 @@
+{
+	"meta": {
+		"working_dir": "./test_environment",
+		"patches_dir": "/home/michael/kdlp_test/patches/"
+	
+	},
+	"levels": [
+		[
+			{
+				"args": ["ls"],
+				"input": "",
+				"expected": "zero.txt\r\n"
+			}
+			
+		],
+		[
+			{
+				"args": ["ls"],
+				"input": "",
+				"expected": "zero.txt\r\n"
+			}
+		]
+
+	]
+}
