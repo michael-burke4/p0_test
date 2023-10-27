@@ -1,23 +1,43 @@
 {
-	"meta": {
-		"working_dir": "./test_environment",
-		"patches_dir": "/home/michael/kdlp_test/patches/"
-	
+	"replacements": {
+		"${TESTDIR}": "/home/michael/kdlp_test/test_environment"
 	},
 	"levels": [
 		[
 			{
 				"args": ["ls"],
 				"input": "",
-				"expected": "zero.txt\r\n"
+				"expected": "Makefile\r\n",
+				"expect_err": 0
 			}
 			
 		],
 		[
 			{
-				"args": ["ls"],
+				"args": ["make"],
 				"input": "",
-				"expected": "zero.txt\r\n"
+				"expected": "${ANY}",
+				"expect_err": 0
+			},
+			{
+				"args": ["./shell"],
+				"input": "",
+				"expected": "${TESTDIR}$ \r\n",
+				"expect_err": 0
+			}
+		],
+		[
+			{
+				"args": ["make"],
+				"input": "",
+				"expected": "${ANY}",
+				"expect_err": 0
+			},
+			{
+				"args": ["./shell"],
+				"input": "",
+				"expected": "${TESTDIR} ",
+				"expect_err": 0
 			}
 		]
 
