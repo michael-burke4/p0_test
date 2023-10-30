@@ -49,7 +49,6 @@ def tty_capture(cmd, bytes_input, output_bytes=2048):
     result = {mo: b'', me: b''}
     tm = time.time()
     try:
-        #while readable and time.time() - tm < timeout * 2:
         while readable and time.time() - tm < timeout * 8:
             ready, _, _ = select.select(readable, [], [], timeout)
             for fd in ready:
@@ -101,16 +100,24 @@ def do_prompt(level_no):
     while True:
         inp = input("Apply patches until level %d is complete. [h]elp, [c]ontinue, [a]bort, or [e]xit: " % level_no)
         if inp == 'a':
-            return 0
+            return False
         elif inp == 'e':
             clean_cur_dir()
-            return 0
+            return False
         elif inp == 'h':
             print("CONTINUE: Patches for the current level have been applied, proceed to run the tests for that level.")
             print("ABORT: Exit the program, perform no further tests, Will not delete any files in the testing directory.")
             print("EXIT: Exit the program, perform no further tests, and completely clean the testing directory.")
         elif inp == 'c':
+            return True
+
+def check_ok():
+    while True:
+        inp = input("Is this ok? [y/n]: ")
+        if inp == 'y':
             return 1
+        elif inp == 'n':
+            return 0
 
 def main():
     if not os.path.exists('tests.json'):
@@ -127,31 +134,46 @@ def main():
     repo = git.Repo.init('.')
 
     level_no = -1
+    score = 0
+    tests = 0
     for level in js['levels']:
         if not do_prompt(level_no):
             return
 
         test_no = 0
+        level_score = 0
         for test in level:
             out, err = run_test(test)
             out = do_replacements(str(out, 'UTF-8'), js)
             expct = do_replacements(test['expected'], js)
             print("------------- LEVEL", level_no, "TEST", test_no, "-------------")
+            need_check = False
+            ok = 0
             if test['expect_err']:
                 if err == b'':
                     print_color(WARNING, 'Warning: expected an error, did not get one')
+                    need_check = True
                 else:
                     print_color(OKGREEN, 'Got an expected error. stderr:', err)
+                    need_check = True
             else:
                 if err != b'':
-                    print_color(WARNING, '* Warning: Got an unexpected error:', err, '*')
+                    print_color(WARNING, 'Warning: Got an unexpected error:', err)
+                    need_check = True
             if out == expct or expct == b'${ANY}':
                 print_color(OKGREEN, 'Got expected output')
+                ok = 1
             else:
                 print_color(FAIL, 'FAILED: \ngot\n\t', out, '\nexpected\n\t', expct)
-
+                need_check = True
+            if need_check:
+                ok = check_ok()
+            score += ok
+            tests += 1
             test_no += 1
         level_no += 1
+
+    print("Score:", "%d/%d" % (score, tests))
 
     done = 0
     while done != 'y' and done != 'n':
