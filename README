@@ -1,0 +1,11 @@
+This is the KDLP P0 semi-autonomous tester!
+
+To run kdlp_test.py, make sure you have a file named
+	`tests.json`
+located WITHIN THE SAME DIRECTORY AS kdlp_test.py.
+To do this, create a copy of `tests-example.json` called `tests.json,`
+and put the *ABSOLUTE PATH* to a testing directory of your choosing in the value
+field of the entry "${TESTDIR}" which should be under "replacements."
+
+Sections of text used in testing marked ${TESTDIR} will be replaced with whatever
+text you put in that entry, so be careful, and make sure you put the ABSOLUTE PATH!!!!!

@@ -8,9 +8,26 @@ import git
 import shutil
 import time
 
+# https://stackoverflow.com/a/287944
+HEADER = '\033[95m'
+OKBLUE = '\033[94m'
+OKCYAN = '\033[96m'
+OKGREEN = '\033[92m'
+WARNING = '\033[93m'
+FAIL = '\033[91m'
+ENDC = '\033[0m'
+BOLD = '\033[1m'
+UNDERLINE = '\033[4m'
+
+def print_color(color_tag, *args, ending='\n'):
+    print(color_tag, end='')
+    for arg in args:
+        print(arg, end=' ')
+    print(ENDC, end=ending)
+
 # this function is courtesy of
 # https://stackoverflow.com/a/52954716
-def tty_capture(cmd, bytes_input, output_bytes=512):
+def tty_capture(cmd, bytes_input, output_bytes=2048):
     # Capture the output of cmd with bytes_input to stdin,
     # with stdin, stdout and stderr as TTYs.
     # Based on Andy Hayden's gist:
@@ -75,7 +92,6 @@ def check_dir_empty(directory):
             clean_cur_dir()
 
 def do_replacements(string, js):
-    #string = str(string, 'UTF-8')
     reps = js['replacements']
     for rep in reps:
         string = string.replace(rep, reps[rep])
@@ -97,6 +113,9 @@ def do_prompt(level_no):
             return 1
 
 def main():
+    if not os.path.exists('tests.json'):
+        print_color(FAIL, "tests.json does not exist - check the README for more info")
+        exit(1)
     file = open('tests.json')
     js = json.load(file)
 
@@ -117,15 +136,19 @@ def main():
             out, err = run_test(test)
             out = do_replacements(str(out, 'UTF-8'), js)
             expct = do_replacements(test['expected'], js)
+            print("------------- LEVEL", level_no, "TEST", test_no, "-------------")
             if test['expect_err']:
                 if err == b'':
-                    print("Warning: expected an error, did not get one", end=' ')
+                    print_color(WARNING, 'Warning: expected an error, did not get one')
                 else:
-                    print("Got an error while expecting an error. Stderr:", err, end=' ')
-            if out == expct or expct == b'${ANY}':
-                print('Level', level_no, 'Test', test_no, 'got expected output')
+                    print_color(OKGREEN, 'Got an expected error. stderr:', err)
             else:
-                print('Level', level_no, 'Test', test_no, 'FAILED: \ngot\n\t', out, '\nexpected\n\t', expct)
+                if err != b'':
+                    print_color(WARNING, '* Warning: Got an unexpected error:', err, '*')
+            if out == expct or expct == b'${ANY}':
+                print_color(OKGREEN, 'Got expected output')
+            else:
+                print_color(FAIL, 'FAILED: \ngot\n\t', out, '\nexpected\n\t', expct)
 
             test_no += 1
         level_no += 1
