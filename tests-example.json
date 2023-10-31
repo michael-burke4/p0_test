@@ -9,7 +9,8 @@
 				"args": ["ls"],
 				"input": "",
 				"expected": "Makefile\r\n",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			}
 			
 		],
@@ -19,13 +20,15 @@
 				"args": ["make"],
 				"input": "",
 				"expected": "${ANY}",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			},
 			{
 				"args": ["./shell"],
 				"input": "",
 				"expected": "${TESTDIR}$ \r\n",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			}
 		],
 		[
@@ -34,25 +37,29 @@
 				"args": ["make"],
 				"input": "",
 				"expected": "${ANY}",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			},
 			{
 				"args": ["./shell"],
 				"input": "",
 				"expected": "${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 1
 			},
 			{
 				"args": ["./shell"],
 				"input": "abcd\n",
 				"expected": "${TESTDIR}$ ${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 1
 			},
 			{
 				"args": ["./shell"],
 				"input": "reallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreally long line\n",
 				"expected": "${TESTDIR}$ ${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 1
 			}
 		],
 		[
@@ -61,25 +68,29 @@
 				"args": ["make"],
 				"input": "",
 				"expected": "${ANY}",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			},
 			{
 				"args": ["./shell"],
 				"input": "",
 				"expected": "${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 1
 			},
 			{
 				"args": ["./shell"],
 				"input": "reallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreallyreally long line\n",
 				"expected": "${TESTDIR}$ Unrecognized command\r\n${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 1
 			},
 			{
 				"args": ["./shell"],
 				"input": "abcd\n\n\nls\n",
 				"expected": "${TESTDIR}$ Unrecognized command\r\n${TESTDIR}$ ${TESTDIR}$ ${TESTDIR}$ Unrecognized command\r\n${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 1
 			}
 		],
 		[
@@ -88,43 +99,50 @@
 				"args": ["make"],
 				"input": "",
 				"expected": "${ANY}",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			},
 			{
 				"args": ["./shell"],
 				"input": "",
 				"expected": "${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 1
 			},
 			{
 				"args": ["./shell"],
 				"input": "ls\n",
 				"expected": "${TESTDIR}$ Unrecognized command ls\r\n${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 1
 			},
 			{
 				"args": ["./shell"],
 				"input": "cat shell.c\n",
 				"expected": "${TESTDIR}$ Unrecognized command cat\r\n${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 1
 			},
 			{
 				"args": ["./shell"],
 				"input": "reeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeally long command\n",
 				"expected": "${TESTDIR}$ Unrecognized command reeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeally\r\n${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 1
 			},
 			{
 				"args": ["./shell"],
 				"input": "\nls\n",
 				"expected": "${TESTDIR}$ ${TESTDIR}$ Unrecognized command ls\r\n${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 1
 			},
 			{
 				"args": ["./shell"],
 				"input": "\n\ncat shell.c\nls\n",
 				"expected": "${TESTDIR}$ ${TESTDIR}$ ${TESTDIR}$ Unrecognized command cat\r\n${TESTDIR}$ Unrecognized command ls\r\n${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 1
 			}
 		],
 		[
@@ -133,19 +151,29 @@
 				"args": ["make"],
 				"input": "",
 				"expected": "${ANY}",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			},
 			{
 				"args": ["./shell"],
-				"input": "exec /usr/bin/echo hello\n",
+				"input": "exit\n",
+				"expected": "${TESTDIR}$ ",
+				"expect_err": 0,
+				"expect_timeout": 0
+			},
+			{
+				"args": ["./shell"],
+				"input": "exec /usr/bin/echo hello\nexit\n",
 				"expected": "${TESTDIR}$ hello\r\n",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			},
 			{
 				"args": ["./shell"],
-				"input": "\nexit",
+				"input": "\nexit\n",
 				"expected": "${TESTDIR}$ ${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			}
 		],
 		[
@@ -154,13 +182,15 @@
 				"args": ["make"],
 				"input": "",
 				"expected": "${ANY}",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			},
 			{
 				"args": ["./shell"],
-				"input": "/usr/bin/echo hi\n",
+				"input": "/usr/bin/echo hi\nexit\n",
 				"expected": "${TESTDIR}$ hi\r\n${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			}
 		],
 		[
@@ -169,13 +199,15 @@
 				"args": ["make"],
 				"input": "",
 				"expected": "${ANY}",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			},
 			{
 				"args": ["./shell"],
-				"input": "echo hi\n",
+				"input": "echo hi\nexit\n",
 				"expected": "${TESTDIR}$ hi\r\n${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			}
 		],
 		[
@@ -184,13 +216,15 @@
 				"args": ["make"],
 				"input": "",
 				"expected": "${ANY}",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			},
 			{
 				"args": ["./shell"],
-				"input": "/usr/bin/echo hi\n",
+				"input": "/usr/bin/echo hi\nexit\n",
 				"expected": "${TESTDIR}$ hi\r\n${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			}
 		],
 		[
@@ -199,13 +233,15 @@
 				"args": ["make"],
 				"input": "",
 				"expected": "${ANY}",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			},
 			{
 				"args": ["./shell"],
-				"input": "echo hi > out.txt\ncat out.txt\n",
+				"input": "echo hi > out.txt\ncat out.txt\nexit\n",
 				"expected": "${TESTDIR}$ ${TESTDIR}$ hi\r\n${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			}
 		],
 		[
@@ -214,13 +250,15 @@
 				"args": ["make"],
 				"input": "",
 				"expected": "${ANY}",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			},
 			{
 				"args": ["./shell"],
-				"input": "seq 5 | grep 4\n",
+				"input": "seq 5 | grep 4\nexit\n",
 				"expected": "${TESTDIR}$ 4\r\n${TESTDIR}$ ",
-				"expect_err": 0
+				"expect_err": 0,
+				"expect_timeout": 0
 			}
 		]
 

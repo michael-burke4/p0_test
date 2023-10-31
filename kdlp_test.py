@@ -45,11 +45,15 @@ def tty_capture(cmd, bytes_input, output_bytes=2048):
     os.write(mi, bytes_input)
 
     timeout = 0.04  # seconds
+    timed = False
     readable = [mo, me]
     result = {mo: b'', me: b''}
     tm = time.time()
     try:
-        while readable and time.time() - tm < timeout * 8:
+        while readable:
+            if time.time() - tm > timeout * 8:
+                timed = True
+                break
             ready, _, _ = select.select(readable, [], [], timeout)
             for fd in ready:
                 try:
@@ -70,7 +74,7 @@ def tty_capture(cmd, bytes_input, output_bytes=2048):
         if p.poll() is None:
             p.kill()
         p.wait()
-    return result[mo], result[me]
+    return result[mo], result[me], timed
 
 def run_test(test):
     return tty_capture(test['args'], bytes(test['input'], 'UTF-8'))
@@ -96,7 +100,7 @@ def do_replacements(string, js):
         string = string.replace(rep, reps[rep])
     return bytes(string, 'UTF-8')
 
-def do_prompt(level_no):
+def prompt(level_no):
     while True:
         inp = input("Apply patches until level %d is complete. [h]elp, [c]ontinue, [a]bort, or [e]xit: " % level_no)
         if inp == 'a':
@@ -137,35 +141,52 @@ def main():
     score = 0
     tests = 0
     for level in js['levels']:
-        if not do_prompt(level_no):
+        if not prompt(level_no):
             return
 
         test_no = 0
         level_score = 0
         for test in level:
-            out, err = run_test(test)
+            out, err, timed_out = run_test(test)
             out = do_replacements(str(out, 'UTF-8'), js)
             expct = do_replacements(test['expected'], js)
             print("------------- LEVEL", level_no, "TEST", test_no, "-------------")
             need_check = False
             ok = 0
+
+            ##### stderr correctness #####
             if test['expect_err']:
                 if err == b'':
                     print_color(WARNING, 'Warning: expected an error, did not get one')
                     need_check = True
                 else:
+                    # Err could be anything, best to check even if an error is expected
                     print_color(OKGREEN, 'Got an expected error. stderr:', err)
                     need_check = True
             else:
                 if err != b'':
                     print_color(WARNING, 'Warning: Got an unexpected error:', err)
                     need_check = True
+
+            ##### timeout correctness #####
+            if test['expect_timeout']:
+                if not timed_out:
+                    print_color(WARNING, 'Warning: Test exited prematurely, did not time out as expected.')
+                    need_check = True
+            else:
+                if timed_out:
+                    print_color(WARNING, 'Warning: Test unexpectedly timed out')
+                    need_check = True
+
+            ##### stdout correctness #####
             if out == expct or expct == b'${ANY}':
                 print_color(OKGREEN, 'Got expected output')
                 ok = 1
             else:
                 print_color(FAIL, 'FAILED: \ngot\n\t', out, '\nexpected\n\t', expct)
                 need_check = True
+
+
             if need_check:
                 ok = check_ok()
             score += ok
