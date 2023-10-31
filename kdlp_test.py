@@ -66,7 +66,6 @@ def tty_capture(cmd, bytes_input, output_bytes=2048):
                 else:
                     if not data: # EOF
                         readable.remove(fd)
-                    #print("\n\nDATA:", data, "\n\n")
                     result[fd] += data
     finally:
         for fd in [mo, me, mi]:
@@ -90,7 +89,7 @@ def check_dir_empty(directory):
     inpt = 0
     if os.listdir() != []:
         while inpt != 'y' and inpt != 'n':
-            inpt = input("WARNING: %s is not empty. Remove all files and directories in %s? [y/n]: " % (directory, directory))
+            inpt = input('WARNING: %s is not empty. Remove all files and directories in %s? [y/n]: ' % (directory, directory))
         if inpt == 'y':
             clean_cur_dir()
 
@@ -102,33 +101,50 @@ def do_replacements(string, js):
 
 def prompt(level_no):
     while True:
-        inp = input("Apply patches until level %d is complete. [h]elp, [c]ontinue, [a]bort, or [e]xit: " % level_no)
+        inp = input('Apply patches until level %d is complete. [h]elp, [c]ontinue, [a]bort, or [e]xit: ' % level_no)
         if inp == 'a':
             return False
         elif inp == 'e':
             clean_cur_dir()
             return False
         elif inp == 'h':
-            print("CONTINUE: Patches for the current level have been applied, proceed to run the tests for that level.")
-            print("ABORT: Exit the program, perform no further tests, Will not delete any files in the testing directory.")
-            print("EXIT: Exit the program, perform no further tests, and completely clean the testing directory.")
+            print('CONTINUE: Patches for the current level have been applied, proceed to run the tests for that level.')
+            print('ABORT: Exit the program, perform no further tests, Will not delete any files in the testing directory.')
+            print('EXIT: Exit the program, perform no further tests, and completely clean the testing directory.')
         elif inp == 'c':
             return True
 
 def check_ok():
     while True:
-        inp = input("Is this ok? [y/n]: ")
+        inp = input('Is this ok? [y/n]: ')
         if inp == 'y':
             return 1
         elif inp == 'n':
             return 0
 
+def make_log(name):
+    if 'logs' not in os.listdir():
+        os.mkdir('logs')
+    filename = '%s-%d.log' % (name, time.time())
+    logfile = open('logs/'+filename, 'a')
+    return logfile
+
+def log(log_file, *args, ending='\n'):
+    for arg in args:
+        print(arg, end=' ', file=log_file)
+    print('', end=ending, file=log_file)
+
+def print_and_log(color, log_file, *args, ending='\n'):
+    print_color(color, *args, ending=ending)
+    log(log_file, *args, ending=ending)
+
 def main():
     if not os.path.exists('tests.json'):
-        print_color(FAIL, "tests.json does not exist - check the README for more info")
+        print_color(FAIL, 'tests.json does not exist - check the README for more info')
         exit(1)
     file = open('tests.json')
     js = json.load(file)
+    logfile = make_log(js['replacements']['${NAME}'])
 
     working_dir = js['replacements']['${TESTDIR}']
     os.chdir(working_dir)
@@ -142,6 +158,7 @@ def main():
     tests = 0
     for level in js['levels']:
         if not prompt(level_no):
+            print_and_log(HEADER, logfile, 'Score:', '%d/%d (tested up to level %d)' % (score, tests, level_no))
             return
 
         test_no = 0
@@ -150,55 +167,57 @@ def main():
             out, err, timed_out = run_test(test)
             out = do_replacements(str(out, 'UTF-8'), js)
             expct = do_replacements(test['expected'], js)
-            print("------------- LEVEL", level_no, "TEST", test_no, "-------------")
+            print_and_log(HEADER, logfile, '------------- LEVEL', level_no, 'TEST', test_no, '-------------')
             need_check = False
             ok = 0
 
             ##### stderr correctness #####
             if test['expect_err']:
                 if err == b'':
-                    print_color(WARNING, 'Warning: expected an error, did not get one')
+                    print_and_log(WARNING, logfile, 'Warning: expected an error, did not get one')
                     need_check = True
                 else:
                     # Err could be anything, best to check even if an error is expected
-                    print_color(OKGREEN, 'Got an expected error. stderr:', err)
+                    print_and_log(OKGREEN, logfile, 'Got an expected error. stderr:', err)
                     need_check = True
             else:
                 if err != b'':
-                    print_color(WARNING, 'Warning: Got an unexpected error:', err)
+                    print_and_log(WARNING, logfile, 'Warning: Got an unexpected error:', err)
                     need_check = True
 
             ##### timeout correctness #####
             if test['expect_timeout']:
                 if not timed_out:
-                    print_color(WARNING, 'Warning: Test exited prematurely, did not time out as expected.')
+                    print_and_log(WARNING, logfile, 'Warning: Test exited prematurely, did not time out as expected.')
                     need_check = True
             else:
                 if timed_out:
-                    print_color(WARNING, 'Warning: Test unexpectedly timed out')
+                    print_and_log(WARNING, logfile, 'Warning: Test unexpectedly timed out')
                     need_check = True
 
             ##### stdout correctness #####
             if out == expct or expct == b'${ANY}':
-                print_color(OKGREEN, 'Got expected output')
+                print_and_log(OKGREEN, logfile, 'Got expected output')
                 ok = 1
             else:
-                print_color(FAIL, 'FAILED: \ngot\n\t', out, '\nexpected\n\t', expct)
+                print_and_log(FAIL, logfile, 'OUTPUT MISMATCH:\ngot\n\t', out, '\nexpected\n\t', expct)
                 need_check = True
-
-
             if need_check:
                 ok = check_ok()
+            if ok:
+                log(logfile, '***** OK *****')
+            else:
+                log(logfile, '** FAIL **')
             score += ok
             tests += 1
             test_no += 1
         level_no += 1
 
-    print("Score:", "%d/%d" % (score, tests))
+    print_and_log(HEADER, logfile, 'Score:', '%d/%d' % (score, tests))
 
     done = 0
     while done != 'y' and done != 'n':
-        done = input("Testing finished. Remove all files and directories in %s? [y/n]: " % (working_dir))
+        done = input('Testing finished. Remove all files and directories in %s? [y/n]: ' % (working_dir))
     if done == 'y':
         clean_cur_dir()
     return
