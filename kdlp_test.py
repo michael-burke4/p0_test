@@ -93,8 +93,7 @@ def check_dir_empty(directory):
         if inpt == 'y':
             clean_cur_dir()
 
-def do_replacements(string, js):
-    reps = js['replacements']
+def do_replacements(string, reps):
     for rep in reps:
         string = string.replace(rep, reps[rep])
     return bytes(string, 'UTF-8')
@@ -158,15 +157,15 @@ def main():
     tests = 0
     for level in js['levels']:
         if not prompt(level_no):
-            print_and_log(HEADER, logfile, 'Score:', '%d/%d (tested up to level %d)' % (score, tests, level_no))
+            print_and_log(HEADER, logfile, 'Score: %d/%d' % (score, tests))
             return
 
         test_no = 0
         level_score = 0
         for test in level:
             out, err, timed_out = run_test(test)
-            out = do_replacements(str(out, 'UTF-8'), js)
-            expct = do_replacements(test['expected'], js)
+            out = do_replacements(str(out, 'UTF-8'), js['replacements'])
+            expct = do_replacements(test['expected'], js['replacements'])
             print_and_log(HEADER, logfile, '------------- LEVEL', level_no, 'TEST', test_no, '-------------')
             need_check = False
             ok = 0
@@ -215,12 +214,14 @@ def main():
 
     print_and_log(HEADER, logfile, 'Score:', '%d/%d' % (score, tests))
 
-    done = 0
-    while done != 'y' and done != 'n':
-        done = input('Testing finished. Remove all files and directories in %s? [y/n]: ' % (working_dir))
-    if done == 'y':
-        clean_cur_dir()
-    return
+
+    while True:
+        done = input('Testing finished. Remove all files and directories in %s? [y/n]: ' % working_dir)
+        if done == 'y':
+            clean_cur_dir()
+            return
+        if done == 'n':
+            return
 
 if __name__ == '__main__':
     main()
