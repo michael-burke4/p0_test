@@ -1,10 +1,11 @@
+#!/usr/bin/python3
+
 import errno
 import json
 import os
 import pty
 import select
 import subprocess
-import git
 import shutil
 import time
 
@@ -137,91 +138,18 @@ def print_and_log(color, log_file, *args, ending='\n'):
     print_color(color, *args, ending=ending)
     log(log_file, *args, ending=ending)
 
-def main():
-    if not os.path.exists('tests.json'):
-        print_color(FAIL, 'tests.json does not exist - check the README for more info')
-        exit(1)
-    file = open('tests.json')
-    js = json.load(file)
-    logfile = make_log(js['replacements']['${NAME}'])
-
-    working_dir = js['replacements']['${TESTDIR}']
-    os.chdir(working_dir)
-
-    check_dir_empty(working_dir)
-
-    repo = git.Repo.init('.')
-
-    level_no = -1
-    score = 0
-    tests = 0
-    for level in js['levels']:
-        if not prompt(level_no):
-            print_and_log(HEADER, logfile, 'Score: %d/%d' % (score, tests))
-            return
-
-        test_no = 0
-        level_score = 0
-        for test in level:
-            out, err, timed_out = run_test(test)
-            out = do_replacements(str(out, 'UTF-8'), js['replacements'])
-            expct = do_replacements(test['expected'], js['replacements'])
-            print_and_log(HEADER, logfile, '------------- LEVEL', level_no, 'TEST', test_no, '-------------')
-            need_check = False
-            ok = 0
-
-            ##### stderr correctness #####
-            if test['expect_err']:
-                if err == b'':
-                    print_and_log(WARNING, logfile, 'Warning: expected an error, did not get one')
-                    need_check = True
-                else:
-                    # Err could be anything, best to check even if an error is expected
-                    print_and_log(OKGREEN, logfile, 'Got an expected error. stderr:', err)
-                    need_check = True
-            else:
-                if err != b'':
-                    print_and_log(WARNING, logfile, 'Warning: Got an unexpected error:', err)
-                    need_check = True
-
-            ##### timeout correctness #####
-            if test['expect_timeout']:
-                if not timed_out:
-                    print_and_log(WARNING, logfile, 'Warning: Test exited prematurely, did not time out as expected.')
-                    need_check = True
-            else:
-                if timed_out:
-                    print_and_log(WARNING, logfile, 'Warning: Test unexpectedly timed out')
-                    need_check = True
-
-            ##### stdout correctness #####
-            if out == expct or expct == b'${ANY}':
-                print_and_log(OKGREEN, logfile, 'Got expected output')
-                ok = 1
-            else:
-                print_and_log(FAIL, logfile, 'OUTPUT MISMATCH:\ngot\n\t', out, '\nexpected\n\t', expct)
-                need_check = True
-            if need_check:
-                ok = check_ok()
-            if ok:
-                log(logfile, '***** OK *****')
-            else:
-                log(logfile, '** FAIL **')
-            score += ok
-            tests += 1
-            test_no += 1
-        level_no += 1
-
-    print_and_log(HEADER, logfile, 'Score:', '%d/%d' % (score, tests))
-
-
+def prompt_level():
     while True:
-        done = input('Testing finished. Remove all files and directories in %s? [y/n]: ' % working_dir)
-        if done == 'y':
-            clean_cur_dir()
-            return
-        if done == 'n':
-            return
+        try:
+            lvl = int(input("Which level would you like to grade? (0-9)\t"))
+            return lvl
+        except ValueError:
+            print("INVALID! Enter a number between 0 and 9")
+
+def main():
+    print("Welcome to the kdlp grading system!")
+    lvl = prompt_level()
+
 
 if __name__ == '__main__':
     main()
