@@ -140,16 +140,17 @@ def print_and_log(color, log_file, *args, ending='\n'):
 
 def prompt_level():
     while True:
-        try:
-            lvl = int(input("Which level would you like to grade? (0-9)\t"))
+        lvl = input("Which level would you like to grade?  ")
+        if lvl in os.listdir("./submissions"):
             return lvl
-        except ValueError:
-            print("INVALID! Enter a number between 0 and 9")
+
+def load_bins(lvl):
+    print(os.listdir(f"./submissions/{lvl}"))
 
 def main():
     print("Welcome to the kdlp grading system!")
     lvl = prompt_level()
-
+    bins = load_bins(lvl)
 
 if __name__ == '__main__':
     main()
