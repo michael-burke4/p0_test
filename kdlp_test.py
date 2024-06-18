@@ -147,14 +147,37 @@ def prompt_level():
             return lvl
 
 def load_bins(lvl):
-    return [f"{os.getcwd()}/{SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{SUBMISSIONS_DIRNAME}/{lvl}")]
+    return [f"{os.getcwd()}/{SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{SUBMISSIONS_DIRNAME}/{lvl}") if not x.startswith("good_")]
+
+def load_good_bins(lvl):
+    return [f"{os.getcwd()}/{SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{SUBMISSIONS_DIRNAME}/{lvl}") if x.startswith("good_")]
+
+def run_bins(test_inputs, bins):
+    ret = []
+    for binary in bins:
+        entry = {}
+        entry["name"] = binary.split("/")[-1]
+        entry["test_outputs"] = []
+        for t in test_inputs:
+            out = tty_capture(binary, bytes(t, "utf-8"))
+            entry["test_outputs"] = {}
+            entry["test_outputs"]["stdout"] = out[0]
+            entry["test_outputs"]["stderr"] = out[1]
+            entry["test_outputs"]["timout"] = out[2]
+        ret.append(entry)
+    return ret
 
 def main():
     print("Welcome to the kdlp grading system!")
     lvl = prompt_level()
     bins = load_bins(lvl)
-    for binary in bins:
-        print(tty_capture(binary, bytes("", "UTF-8")))
+    good = load_good_bins(lvl)
+    tests = ["a\n", "b\n", "abc\n"]
+    outs = run_bins(tests, bins)
+    good_outs = run_bins(tests, good)
+    print("good outs", good_outs)
+    print("outs", outs)
+
 
 if __name__ == '__main__':
     main()
