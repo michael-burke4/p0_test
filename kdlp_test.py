@@ -9,6 +9,8 @@ import subprocess
 import shutil
 import time
 
+SUBMISSIONS_DIRNAME = "submissions"
+
 # https://stackoverflow.com/a/287944
 HEADER = '\033[95m'
 OKBLUE = '\033[94m'
@@ -141,16 +143,18 @@ def print_and_log(color, log_file, *args, ending='\n'):
 def prompt_level():
     while True:
         lvl = input("Which level would you like to grade?  ")
-        if lvl in os.listdir("./submissions"):
+        if lvl in os.listdir(f"./{SUBMISSIONS_DIRNAME}"):
             return lvl
 
 def load_bins(lvl):
-    print(os.listdir(f"./submissions/{lvl}"))
+    return [f"{os.getcwd()}/{SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{SUBMISSIONS_DIRNAME}/{lvl}")]
 
 def main():
     print("Welcome to the kdlp grading system!")
     lvl = prompt_level()
     bins = load_bins(lvl)
+    for binary in bins:
+        print(tty_capture(binary, bytes("", "UTF-8")))
 
 if __name__ == '__main__':
     main()
