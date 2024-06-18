@@ -163,8 +163,22 @@ def run_bins(test_inputs, bins):
             entry["test_outputs"] = {}
             entry["test_outputs"]["stdout"] = out[0]
             entry["test_outputs"]["stderr"] = out[1]
-            entry["test_outputs"]["timout"] = out[2]
+            entry["test_outputs"]["timeout"] = out[2]
         ret.append(entry)
+    return ret
+
+def get_single_test_report(output, good_outs):
+    ret = []
+    for good in good_outs:
+        o = output["test_outputs"]
+        g = good["test_outputs"]
+        ret.append({"name": f"{output['name']} against {good['name']}", "stdout": o["stdout"] == g["stdout"], "stderr": g["stderr"] == o["stderr"], "timeout": g["timeout"] == o["timeout"]})
+    return ret
+
+def get_level_report(outs, good_outs):
+    ret = []
+    for out in outs:
+        ret.append(get_single_test_report(out, good_outs))
     return ret
 
 def main():
@@ -175,9 +189,7 @@ def main():
     tests = ["a\n", "b\n", "abc\n"]
     outs = run_bins(tests, bins)
     good_outs = run_bins(tests, good)
-    print("good outs", good_outs)
-    print("outs", outs)
-
+    print(get_level_report(outs, good_outs))
 
 if __name__ == '__main__':
     main()
