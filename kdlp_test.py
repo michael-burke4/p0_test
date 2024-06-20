@@ -142,9 +142,44 @@ def print_and_log(color, log_file, *args, ending='\n'):
 
 def prompt_level():
     while True:
-        lvl = input("Which level would you like to grade?  ")
+        lvl = input("Which level would you like to grade? (or [e]xit) ")
+        if lvl == "e":
+            return "e"
         if lvl in os.listdir(f"./{SUBMISSIONS_DIRNAME}"):
             return lvl
+
+def prompt_grading(outs, good_outs):
+    while True:
+        inp = input("[o]verview, [i]nspect a specific submission's results, [c]ontinue grading, or [e]xit the grading program:  ")
+        if inp == "o":
+            print_overview(outs, good_outs)
+        if inp == "i":
+            print("INSPECT")
+        if inp == "c":
+            return
+        if inp == "e":
+            exit()
+
+def print_overview(outs, good_outs):
+    for out in outs:
+        i = 0
+        print(f"binary name: {out['name']}")
+        for test in out["test_outputs"]:
+            match = search_for_good_match(i, test, good_outs)
+            print(f"\tTest #{i}: ", end="")
+            if match != None:
+                print_color(OKGREEN, f"Output matches with {match}")
+            else:
+                print_color(FAIL, "Output did not match any known good outputs!")
+            i += 1
+
+def search_for_good_match(test_index, output, good_outs):
+    ret = []
+    for good in good_outs:
+        g = good["test_outputs"][test_index]
+        if output["stdout"] == g["stdout"] and output["stderr"] == g["stderr"] and output["timeout"] == g["timeout"]:
+            return good["name"]
+    return None
 
 def load_bins(lvl):
     return [f"{os.getcwd()}/{SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{SUBMISSIONS_DIRNAME}/{lvl}") if not x.startswith("good_")]
@@ -160,36 +195,30 @@ def run_bins(test_inputs, bins):
         entry["test_outputs"] = []
         for t in test_inputs:
             out = tty_capture(binary, bytes(t, "utf-8"))
-            entry["test_outputs"] = {}
-            entry["test_outputs"]["stdout"] = out[0]
-            entry["test_outputs"]["stderr"] = out[1]
-            entry["test_outputs"]["timeout"] = out[2]
+            test_out = {}
+            test_out["stdout"] = out[0]
+            test_out["stderr"] = out[1]
+            test_out["timeout"] = out[2]
+            entry["test_outputs"].append(test_out)
         ret.append(entry)
-    return ret
-
-def get_single_test_report(output, good_outs):
-    ret = []
-    for good in good_outs:
-        o = output["test_outputs"]
-        g = good["test_outputs"]
-        ret.append({"name": f"{output['name']} against {good['name']}", "stdout": o["stdout"] == g["stdout"], "stderr": g["stderr"] == o["stderr"], "timeout": g["timeout"] == o["timeout"]})
-    return ret
-
-def get_level_report(outs, good_outs):
-    ret = []
-    for out in outs:
-        ret.append(get_single_test_report(out, good_outs))
     return ret
 
 def main():
     print("Welcome to the kdlp grading system!")
-    lvl = prompt_level()
-    bins = load_bins(lvl)
-    good = load_good_bins(lvl)
-    tests = ["a\n", "b\n", "abc\n"]
-    outs = run_bins(tests, bins)
-    good_outs = run_bins(tests, good)
-    print(get_level_report(outs, good_outs))
+    while True:
+        lvl = prompt_level()
+        if lvl == "e":
+            exit()
+        bins = load_bins(lvl)
+        good = load_good_bins(lvl)
+        tests = ["a\n", "b\n", "abc\n"]
+        print("OK! running tests...")
+        outs = run_bins(tests, bins)
+        good_outs = run_bins(tests, good)
+        print("Tests complete!")
+        prompt_grading(outs, good_outs)
+
+
 
 if __name__ == '__main__':
     main()
