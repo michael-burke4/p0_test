@@ -78,68 +78,6 @@ def tty_capture(cmd, bytes_input, output_bytes=2048):
         p.wait()
     return result[mo], result[me], timed
 
-def run_test(test):
-    return tty_capture(test['args'], bytes(test['input'], 'UTF-8'))
-
-def clean_cur_dir():
-    for file in os.scandir():
-        if file.is_file():
-            os.remove(file)
-        else:
-            shutil.rmtree(file)
-
-def check_dir_empty(directory):
-    inpt = 0
-    if os.listdir() != []:
-        while inpt != 'y' and inpt != 'n':
-            inpt = input('WARNING: %s is not empty. Remove all files and directories in %s? [y/n]: ' % (directory, directory))
-        if inpt == 'y':
-            clean_cur_dir()
-
-def do_replacements(string, reps):
-    for rep in reps:
-        string = string.replace(rep, reps[rep])
-    return bytes(string, 'UTF-8')
-
-def prompt(level_no):
-    while True:
-        inp = input('Apply patches until level %d is complete. [h]elp, [c]ontinue, [a]bort, or [e]xit: ' % level_no)
-        if inp == 'a':
-            return False
-        elif inp == 'e':
-            clean_cur_dir()
-            return False
-        elif inp == 'h':
-            print('CONTINUE: Patches for the current level have been applied, proceed to run the tests for that level.')
-            print('ABORT: Exit the program, perform no further tests, Will not delete any files in the testing directory.')
-            print('EXIT: Exit the program, perform no further tests, and completely clean the testing directory.')
-        elif inp == 'c':
-            return True
-
-def check_ok():
-    while True:
-        inp = input('Is this ok? [y/n]: ')
-        if inp == 'y':
-            return 1
-        elif inp == 'n':
-            return 0
-
-def make_log(name):
-    if 'logs' not in os.listdir():
-        os.mkdir('logs')
-    filename = '%s-%d.log' % (name, time.time())
-    logfile = open('logs/'+filename, 'a')
-    return logfile
-
-def log(log_file, *args, ending='\n'):
-    for arg in args:
-        print(arg, end=' ', file=log_file)
-    print('', end=ending, file=log_file)
-
-def print_and_log(color, log_file, *args, ending='\n'):
-    print_color(color, *args, ending=ending)
-    log(log_file, *args, ending=ending)
-
 def prompt_level():
     while True:
         lvl = input("Which level would you like to grade? (or [e]xit) ")
