@@ -12,6 +12,9 @@ import time
 SUBMISSIONS_DIRNAME = "submissions"
 TESTSFILE = "tests.json"
 
+testsfile = None
+
+
 # https://stackoverflow.com/a/287944
 HEADER = '\033[95m'
 OKBLUE = '\033[94m'
@@ -118,7 +121,7 @@ def prompt_list_index(li):
         inp = input(f"select an index between 0 and {l - 1} ")
         try:
             inp = int(inp)
-            if inp >= 0 and inp < l - 1:
+            if inp >= 0 and inp <= l - 1:
                 return inp
         except:
             pass
@@ -159,11 +162,9 @@ def do_comparison(selection, good_out, tests):
 def _prompt_inspect(selection, good_outs, tests):
     print(f"What would you like to do with submission '{selection['name']}'? ")
     while True:
-        inp = input("[c]ompare outputs against a known good version, [w]rite and run a new test, [i]nspect a different submission, or [e]xit the grading program ")
+        inp = input("[c]ompare outputs against a known good version, [i]nspect a different submission, or [e]xit the grading program ")
         if inp == "c":
             do_comparison(selection, good_outs, tests)
-        if inp == "w":
-            pass # TODO
         if inp == "i":
             return
         if inp == "e":
@@ -232,12 +233,52 @@ def run_bins(test_inputs, bins):
         ret.append(entry)
     return ret
 
+def add_test(tests_json, cur_lvl_name, new_test):
+    global testsfile
+
+    testsfile.close()
+    tests_json["levels"][cur_lvl_name].append(new_test)
+    testsfile = open(TESTSFILE, 'w')
+    json.dump(tests_json, testsfile)
+    testsfile.close()
+    testsfile = open(TESTSFILE, 'r')
+
+def do_new_tests(tests_json, cur_lvl_name):
+    print("when writing tests, write \\n where you intend for there to be newline/enter character")
+    while True:
+        inp = input("Write a new test now, or enter just the character 'q' to quit the test maker:\n")
+        if inp == 'q':
+            return
+        new_test = inp.replace("\\n", "\n")
+        if not new_test.endswith("\n"):
+            while True:
+                inp = input("Your new test is missing a terminal newline character. Add one now? [y/n] (your test will likely time out without a terminal newline char) ")
+                if inp == "y":
+                    new_test += "\n"
+                    break
+                if inp == "n":
+                    break
+        add_test(tests_json, cur_lvl_name, new_test)
+
+def prompt_new_tests(tests_json, cur_lvl_name):
+    while True:
+        inp = input("Would you like to write any new tests in this level? [y/n]: ")
+        if inp == "y":
+            do_new_tests(tests_json, cur_lvl_name)
+        elif inp == "n":
+            return
+
 def main():
+    global testsfile
     print("Welcome to the kdlp grading system!")
-    testsfile = open(TESTSFILE)
+    testsfile = open(TESTSFILE, 'r')
     tests = json.load(testsfile)
     while True:
         lvl = prompt_level(tests)
+        prompt_new_tests(tests, lvl)
+        testsfile.close()
+        testsfile = open(TESTSFILE, 'r')
+        tests = json.load(testsfile)
         bins = load_bins(lvl)
         good = load_good_bins(lvl)
         cur_tests = tests["levels"][lvl]
