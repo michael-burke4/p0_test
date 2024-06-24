@@ -10,6 +10,7 @@ import shutil
 import time
 
 SUBMISSIONS_DIRNAME = "submissions"
+TESTSFILE = "tests.json"
 
 # https://stackoverflow.com/a/287944
 HEADER = '\033[95m'
@@ -78,13 +79,14 @@ def tty_capture(cmd, bytes_input, output_bytes=2048):
         p.wait()
     return result[mo], result[me], timed
 
-def prompt_level():
-    while True:
-        lvl = input("Which level would you like to grade? (or [e]xit) ")
-        if lvl == "e":
-            return "e"
-        if lvl in os.listdir(f"./{SUBMISSIONS_DIRNAME}"):
-            return lvl
+def prompt_level(tests):
+    keys = tests["levels"].keys()
+    ret = None
+    for key in tests["levels"].keys():
+        print(key)
+    while ret not in keys:
+        ret = input("Which level would you like to grade? ")
+    return ret
 
 def prompt_grading(outs, good_outs, tests):
     while True:
@@ -232,20 +234,18 @@ def run_bins(test_inputs, bins):
 
 def main():
     print("Welcome to the kdlp grading system!")
+    testsfile = open(TESTSFILE)
+    tests = json.load(testsfile)
     while True:
-        lvl = prompt_level()
-        if lvl == "e":
-            exit()
+        lvl = prompt_level(tests)
         bins = load_bins(lvl)
         good = load_good_bins(lvl)
-        tests = ["a\n", "b\n", "abc\n"]
+        cur_tests = tests["levels"][lvl]
         print("OK! running tests...")
-        outs = run_bins(tests, bins)
-        good_outs = run_bins(tests, good)
+        outs = run_bins(cur_tests, bins)
+        good_outs = run_bins(cur_tests, good)
         print("Tests complete!")
-        prompt_grading(outs, good_outs, tests)
-
-
+        prompt_grading(outs, good_outs, cur_tests)
 
 if __name__ == '__main__':
     main()
