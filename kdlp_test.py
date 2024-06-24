@@ -86,36 +86,125 @@ def prompt_level():
         if lvl in os.listdir(f"./{SUBMISSIONS_DIRNAME}"):
             return lvl
 
-def prompt_grading(outs, good_outs):
+def prompt_grading(outs, good_outs, tests):
     while True:
-        inp = input("[o]verview, [i]nspect a specific submission's results, [c]ontinue grading, or [e]xit the grading program:  ")
+        inp = input("[o]verview, [i]nspect a specific submission, [c]ontinue grading, or [e]xit the grading program:  ")
         if inp == "o":
             print_overview(outs, good_outs)
         if inp == "i":
-            print("INSPECT")
+            prompt_inspect(outs, good_outs, tests)
         if inp == "c":
             return
         if inp == "e":
             exit()
 
+def select_from_list_by_name(li):
+    selection = []
+    if li == []:
+        print(f"tried to select from empty list!", file=sys.stderr)
+        exit(1)
+    for i in li:
+        print(i["name"])
+    while selection == []:
+        select_name = input("Select from the above list... ")
+        selection = [s for s in li if s["name"] == select_name]
+    return selection[0]
+
+def prompt_list_index(li):
+    l = len(li)
+    while True:
+        inp = input(f"select an index between 0 and {l - 1} ")
+        try:
+            inp = int(inp)
+            if inp >= 0 and inp < l - 1:
+                return inp
+        except:
+            pass
+
+def do_comparison(selection, good_out, tests):
+    print("Here is an overview of which tests passed and failed:")
+    print_single_overview(selection, good_out)
+    print("Which binary would you like to compare against?")
+    comp = select_from_list_by_name(good_out)
+    print("which test would you like to compare?")
+    i = prompt_list_index(tests)
+    comp_test = comp["test_outputs"][i]
+    select_test = selection["test_outputs"][i]
+    print_color(OKCYAN, f"test input:\t{bytes(tests[i], 'UTF-8')}")
+    if select_test["stdout"] == comp_test["stdout"]:
+        print_color(OKGREEN, "standard output matched.")
+    else:
+        print_color(FAIL, "standard output mismatch!")
+        print_color(OKGREEN, f"\t{comp['name']}'s output: {comp_test['stdout']}")
+        print_color(WARNING, f"\t{selection['name']}'s output: {select_test['stdout']}")
+    if select_test["stderr"] == comp_test["stderr"]:
+        print_color(OKGREEN, "standard error matched")
+    else:
+        print_color(FAIL, "standard error mismatch!")
+
+    if select_test["timeout"] == comp_test["timeout"]:
+        if select_test["timeout"]:
+            print_color(OKGREEN, "both versions timed out")
+        else:
+            print_color(OKGREEN, "both versions did not time out")
+    else:
+        if select_test["timeout"]:
+            print_color(FAIL, "The student's submission timed out while the known good submission didn't!")
+        else:
+            print_color(FAIL, "The good submission timed out while the student's didn't!")
+
+
+def _prompt_inspect(selection, good_outs, tests):
+    print(f"What would you like to do with submission '{selection['name']}'? ")
+    while True:
+        inp = input("[c]ompare outputs against a known good version, [w]rite and run a new test, [i]nspect a different submission, or [e]xit the grading program ")
+        if inp == "c":
+            do_comparison(selection, good_outs, tests)
+        if inp == "w":
+            pass # TODO
+        if inp == "i":
+            return
+        if inp == "e":
+            exit()
+
+def prompt_inspect(outs, good_outs, tests):
+    while True:
+        print("Which submission would you like to inspect?")
+        selection = select_from_list_by_name(outs)
+        _prompt_inspect(selection, good_outs, tests)
+        while True:
+            inp = input("[i]nspect another submission, [r]eturn to main menu, or [e]xit the grading program ")
+            if inp == "i":
+                break
+            if inp == "r":
+                return
+            if inp == "e":
+                exit()
+
+def print_single_overview(out, good_outs):
+    i = 0
+    print(f"binary name: {out['name']}")
+    for test in out["test_outputs"]:
+        match = search_for_good_match(i, test, good_outs)
+        print(f"\tTest #{i}: ", end="")
+        if match != None:
+            print_color(OKGREEN, f"Output matches with {match}")
+        else:
+            print_color(FAIL, "Output did not match any known good outputs!")
+        i += 1
+
 def print_overview(outs, good_outs):
     for out in outs:
-        i = 0
-        print(f"binary name: {out['name']}")
-        for test in out["test_outputs"]:
-            match = search_for_good_match(i, test, good_outs)
-            print(f"\tTest #{i}: ", end="")
-            if match != None:
-                print_color(OKGREEN, f"Output matches with {match}")
-            else:
-                print_color(FAIL, "Output did not match any known good outputs!")
-            i += 1
+        print_single_overview(out, good_outs)
+
+def tests_agree(output, g):
+    return output["stdout"] == g["stdout"] and output["stderr"] == g["stderr"] and output["timeout"] == g["timeout"]
 
 def search_for_good_match(test_index, output, good_outs):
     ret = []
     for good in good_outs:
         g = good["test_outputs"][test_index]
-        if output["stdout"] == g["stdout"] and output["stderr"] == g["stderr"] and output["timeout"] == g["timeout"]:
+        if tests_agree(output, g):
             return good["name"]
     return None
 
@@ -154,7 +243,7 @@ def main():
         outs = run_bins(tests, bins)
         good_outs = run_bins(tests, good)
         print("Tests complete!")
-        prompt_grading(outs, good_outs)
+        prompt_grading(outs, good_outs, tests)
 
 
 
