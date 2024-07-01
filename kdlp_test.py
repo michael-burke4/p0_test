@@ -148,21 +148,23 @@ def mark_ok_or_not(submission_name, test_level, test_no, okbool):
     okfile = open(OKFILE, "r")
     ok_json = json.load(okfile)
     okfile.close()
-    okfile = open(OKFILE, "w")
+    if submission_name not in ok_json.keys():
+        ok_json[submission_name] = {}
     ok_json[submission_name][f"{test_level}x{test_no}"] = 1 if okbool else 0
+    okfile = open(OKFILE, "w")
     json.dump(ok_json, okfile)
     okfile.close()
 
-def prompt_ok(submission_name, test_level, test_no):
+def prompt_ok(submission, test_level, test_no):
     while True:
         inp = input("[c]ontinue and leave this test's status as it is, manually mark as [o]k, or manually mark as [n]ot ok ")
         if inp == "c":
             return
         if inp == "o":
-            mark_ok_or_not(submission_name, test_level, test_no, True)
+            mark_ok_or_not(submission["name"], test_level, test_no, True)
             return
         if inp == "n":
-            mark_ok_or_not(submission_name, test_level, test_no, False)
+            mark_ok_or_not(submission["name"], test_level, test_no, False)
             return
 
 def do_comparison(selection, good_out, tests, level):
@@ -315,6 +317,7 @@ def prompt_new_tests(tests_json, cur_lvl_name):
             do_new_tests(tests_json, cur_lvl_name)
         elif inp == "n":
             return
+
 
 def main():
     global testsfile
