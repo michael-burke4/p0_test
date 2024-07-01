@@ -11,8 +11,10 @@ import time
 
 SUBMISSIONS_DIRNAME = "submissions"
 TESTSFILE = "tests.json"
+OKFILE = "oks.json"
 
 testsfile = None
+okfile = None
 
 
 # https://stackoverflow.com/a/287944
@@ -25,6 +27,7 @@ FAIL = '\033[91m'
 ENDC = '\033[0m'
 BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
+
 
 def print_color(color_tag, *args, ending='\n'):
     print(color_tag, end='')
@@ -83,21 +86,21 @@ def tty_capture(cmd, bytes_input, output_bytes=2048):
     return result[mo], result[me], timed
 
 def prompt_level(tests):
-    keys = tests["levels"].keys()
+    keys = tests.keys()
     ret = None
-    for key in tests["levels"].keys():
+    for key in keys:
         print(key)
     while ret not in keys:
         ret = input("Which level would you like to grade? ")
     return ret
 
-def prompt_grading(outs, good_outs, tests):
+def prompt_grading(outs, good_outs, lvl, tests):
     while True:
         inp = input("[o]verview, [i]nspect a specific submission, [c]ontinue grading, or [e]xit the grading program:  ")
         if inp == "o":
-            print_overview(outs, good_outs)
+            print_overview(outs, good_outs, lvl)
         if inp == "i":
-            prompt_inspect(outs, good_outs, tests)
+            prompt_inspect(outs, good_outs, tests, lvl)
         if inp == "c":
             return
         if inp == "e":
@@ -126,9 +129,45 @@ def prompt_list_index(li):
         except:
             pass
 
-def do_comparison(selection, good_out, tests):
+def check_ok(submission_name, test_level, test_no):
+    global okfile
+    if okfile is not None:
+        okfile.close()
+    okfile = open(OKFILE, "r")
+    ok_json = json.load(okfile)
+    try:
+        okfile.close()
+        return ok_json[submission_name][f"{test_level}x{test_no}"]
+    except:
+        okfile.close()
+        return None
+    
+
+def mark_ok_or_not(submission_name, test_level, test_no, okbool):
+    global okfile
+    okfile = open(OKFILE, "r")
+    ok_json = json.load(okfile)
+    okfile.close()
+    okfile = open(OKFILE, "w")
+    ok_json[submission_name][f"{test_level}x{test_no}"] = 1 if okbool else 0
+    json.dump(ok_json, okfile)
+    okfile.close()
+
+def prompt_ok(submission_name, test_level, test_no):
+    while True:
+        inp = input("[c]ontinue and leave this test's status as it is, manually mark as [o]k, or manually mark as [n]ot ok ")
+        if inp == "c":
+            return
+        if inp == "o":
+            mark_ok_or_not(submission_name, test_level, test_no, True)
+            return
+        if inp == "n":
+            mark_ok_or_not(submission_name, test_level, test_no, False)
+            return
+
+def do_comparison(selection, good_out, tests, level):
     print("Here is an overview of which tests passed and failed:")
-    print_single_overview(selection, good_out)
+    print_single_overview(selection, good_out, level)
     print("Which binary would you like to compare against?")
     comp = select_from_list_by_name(good_out)
     print("which test would you like to compare?")
@@ -157,24 +196,25 @@ def do_comparison(selection, good_out, tests):
             print_color(FAIL, "The student's submission timed out while the known good submission didn't!")
         else:
             print_color(FAIL, "The good submission timed out while the student's didn't!")
+    prompt_ok(selection, level, i)
 
 
-def _prompt_inspect(selection, good_outs, tests):
+def _prompt_inspect(selection, good_outs, tests, level):
     print(f"What would you like to do with submission '{selection['name']}'? ")
     while True:
-        inp = input("[c]ompare outputs against a known good version, [i]nspect a different submission, or [e]xit the grading program ")
+        inp = input("[c]ompare outputs against a known good version, [r]eturn to previous menu, or [e]xit the grading program ")
         if inp == "c":
-            do_comparison(selection, good_outs, tests)
-        if inp == "i":
+            do_comparison(selection, good_outs, tests, level)
+        if inp == "r":
             return
         if inp == "e":
             exit()
 
-def prompt_inspect(outs, good_outs, tests):
+def prompt_inspect(outs, good_outs, tests, level):
     while True:
         print("Which submission would you like to inspect?")
         selection = select_from_list_by_name(outs)
-        _prompt_inspect(selection, good_outs, tests)
+        _prompt_inspect(selection, good_outs, tests, level)
         while True:
             inp = input("[i]nspect another submission, [r]eturn to main menu, or [e]xit the grading program ")
             if inp == "i":
@@ -184,21 +224,29 @@ def prompt_inspect(outs, good_outs, tests):
             if inp == "e":
                 exit()
 
-def print_single_overview(out, good_outs):
+    
+def print_single_overview(out, good_outs, level):
     i = 0
     print(f"binary name: {out['name']}")
     for test in out["test_outputs"]:
-        match = search_for_good_match(i, test, good_outs)
+        manual_ok = check_ok(out["name"], level, i)
         print(f"\tTest #{i}: ", end="")
-        if match != None:
-            print_color(OKGREEN, f"Output matches with {match}")
+        if manual_ok is not None:
+            if manual_ok == 1:
+                print_color(OKBLUE, f"Manually marked OK!")
+            else:
+                print_color(FAIL, f"{BOLD}Manually marked NOT OK!")
         else:
-            print_color(FAIL, "Output did not match any known good outputs!")
+            match = search_for_good_match(i, test, good_outs)
+            if match != None:
+                print_color(OKGREEN, f"Output matches with {match}")
+            else:
+                print_color(FAIL, "Output did not match any known good outputs!")
         i += 1
 
-def print_overview(outs, good_outs):
+def print_overview(outs, good_outs, level):
     for out in outs:
-        print_single_overview(out, good_outs)
+        print_single_overview(out, good_outs, level)
 
 def tests_agree(output, g):
     return output["stdout"] == g["stdout"] and output["stderr"] == g["stderr"] and output["timeout"] == g["timeout"]
@@ -237,7 +285,7 @@ def add_test(tests_json, cur_lvl_name, new_test):
     global testsfile
 
     testsfile.close()
-    tests_json["levels"][cur_lvl_name].append(new_test)
+    tests_json[cur_lvl_name].append(new_test)
     testsfile = open(TESTSFILE, 'w')
     json.dump(tests_json, testsfile)
     testsfile.close()
@@ -281,12 +329,12 @@ def main():
         tests = json.load(testsfile)
         bins = load_bins(lvl)
         good = load_good_bins(lvl)
-        cur_tests = tests["levels"][lvl]
+        cur_tests = tests[lvl]
         print("OK! running tests...")
         outs = run_bins(cur_tests, bins)
         good_outs = run_bins(cur_tests, good)
         print("Tests complete!")
-        prompt_grading(outs, good_outs, cur_tests)
+        prompt_grading(outs, good_outs, lvl, cur_tests)
 
 if __name__ == '__main__':
     main()
