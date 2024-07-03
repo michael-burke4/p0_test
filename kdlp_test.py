@@ -8,6 +8,7 @@ import select
 import subprocess
 import shutil
 import time
+import pandas as pd
 
 SUBMISSIONS_DIRNAME = "submissions"
 TESTSFILE = "tests.json"
@@ -135,13 +136,11 @@ def check_ok(submission_name, test_level, test_no):
         okfile.close()
     okfile = open(OKFILE, "r")
     ok_json = json.load(okfile)
+    okfile.close()
     try:
-        okfile.close()
         return ok_json[submission_name][f"{test_level}x{test_no}"]
     except:
-        okfile.close()
         return None
-    
 
 def mark_ok_or_not(submission_name, test_level, test_no, okbool):
     global okfile
@@ -218,7 +217,7 @@ def prompt_inspect(outs, good_outs, tests, level):
         selection = select_from_list_by_name(outs)
         _prompt_inspect(selection, good_outs, tests, level)
         while True:
-            inp = input("[i]nspect another submission, [r]eturn to main menu, or [e]xit the grading program ")
+            inp = input("[i]nspect another submission, [r]eturn to previous menu, or [e]xit the grading program ")
             if inp == "i":
                 break
             if inp == "r":
@@ -226,24 +225,34 @@ def prompt_inspect(outs, good_outs, tests, level):
             if inp == "e":
                 exit()
 
-    
+def find_goodness(output, good_outputs, submission_name, level, test_no):
+    manual_ok = check_ok(submission_name, level, test_no)
+    if manual_ok is not None:
+        return ("manual", manual_ok)
+    else:
+        match = search_for_good_match(test_no, output, good_outputs)
+        return ("automatic", match)
+
+def print_goodness(goodness):
+    match goodness[0]:
+        case "manual":
+            if goodness[1] == 1:
+                print_color(OKBLUE, f"Manually marked OK!")
+            else:
+                print_color(FAIL, f"{BOLD}Manually marked NOT OK!")
+        case "automatic":
+            if goodness[1] is None:
+                print_color(FAIL, "Output did not match any known good outputs!")
+            else:
+                print_color(OKGREEN, f"Output matches with {goodness[1]}")
+
 def print_single_overview(out, good_outs, level):
     i = 0
     print(f"binary name: {out['name']}")
     for test in out["test_outputs"]:
-        manual_ok = check_ok(out["name"], level, i)
+        goodness = find_goodness(test, good_outs, out["name"], level, i)
         print(f"\tTest #{i}: ", end="")
-        if manual_ok is not None:
-            if manual_ok == 1:
-                print_color(OKBLUE, f"Manually marked OK!")
-            else:
-                print_color(FAIL, f"{BOLD}Manually marked NOT OK!")
-        else:
-            match = search_for_good_match(i, test, good_outs)
-            if match != None:
-                print_color(OKGREEN, f"Output matches with {match}")
-            else:
-                print_color(FAIL, "Output did not match any known good outputs!")
+        print_goodness(goodness)
         i += 1
 
 def print_overview(outs, good_outs, level):
@@ -283,6 +292,26 @@ def run_bins(test_inputs, bins):
         ret.append(entry)
     return ret
 
+def generate_report(tests):
+    for level in tests:
+        df = pd.DataFrame()
+        bins = load_bins(level)
+        good_bins = load_bins(level)
+        student_outs = run_bins(tests[level], bins)
+        good_outs = run_bins(tests[level], good_bins)
+        for sub in student_outs:
+            student_col = []
+            i = 0
+            for output in sub["test_outputs"]:
+                goodness = find_goodness(output, good_outs, sub["name"], level, i)
+                if goodness[1] == None or goodness[1] == 0:
+                    student_col.append(0)
+                else:
+                    student_col.append(1)
+                i += 1
+            df.insert(0, sub["name"], student_col)
+        df.to_csv(f"reports/{level}.csv")
+
 def add_test(tests_json, cur_lvl_name, new_test):
     global testsfile
 
@@ -294,7 +323,7 @@ def add_test(tests_json, cur_lvl_name, new_test):
     testsfile = open(TESTSFILE, 'r')
 
 def do_new_tests(tests_json, cur_lvl_name):
-    print("when writing tests, write \\n where you intend for there to be newline/enter character")
+    print("When writing tests, write \\n where you intend for there to be newline/enter character")
     while True:
         inp = input("Write a new test now, or enter just the character 'q' to quit the test maker:\n")
         if inp == 'q':
@@ -318,6 +347,15 @@ def prompt_new_tests(tests_json, cur_lvl_name):
         elif inp == "n":
             return
 
+def prompt_intro(tests):
+    inp = input("[g]rade submissions, generate a [r]eport, or [e]xit: ")
+    if inp == "g":
+        return
+    elif inp == "r":
+        generate_report(tests)
+        exit()
+    elif inp == "e":
+        exit()
 
 def main():
     global testsfile
@@ -325,6 +363,7 @@ def main():
     testsfile = open(TESTSFILE, 'r')
     tests = json.load(testsfile)
     while True:
+        prompt_intro(tests)
         lvl = prompt_level(tests)
         prompt_new_tests(tests, lvl)
         testsfile.close()
