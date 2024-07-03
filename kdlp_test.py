@@ -9,14 +9,10 @@ import subprocess
 import shutil
 import time
 import pandas as pd
-
-SUBMISSIONS_DIRNAME = "submissions"
-TESTSFILE = "tests.json"
-OKFILE = "oks.json"
+import config
 
 testsfile = None
 okfile = None
-
 
 # https://stackoverflow.com/a/287944
 HEADER = '\033[95m'
@@ -97,17 +93,17 @@ def prompt_level(tests):
 
 def prompt_grading(outs, good_outs, lvl, tests):
     while True:
-        inp = input("[o]verview, [i]nspect a specific submission, [c]ontinue grading, or [e]xit the grading program:  ")
+        inp = input("[o]verview, [i]nspect a specific submission, [r]eturn to main menu, or [e]xit the grading program:  ")
         if inp == "o":
             print_overview(outs, good_outs, lvl)
         if inp == "i":
             prompt_inspect(outs, good_outs, tests, lvl)
-        if inp == "c":
+        if inp == "r":
             return
         if inp == "e":
             exit()
 
-def select_from_list_by_name(li):
+def prompt_select_from_list_by_name(li):
     selection = []
     if li == []:
         print(f"tried to select from empty list!", file=sys.stderr)
@@ -122,7 +118,7 @@ def select_from_list_by_name(li):
 def prompt_list_index(li):
     l = len(li)
     while True:
-        inp = input(f"select an index between 0 and {l - 1} ")
+        inp = input(f"Select an index between 0 and {l - 1}: ")
         try:
             inp = int(inp)
             if inp >= 0 and inp <= l - 1:
@@ -134,7 +130,7 @@ def check_ok(submission_name, test_level, test_no):
     global okfile
     if okfile is not None:
         okfile.close()
-    okfile = open(OKFILE, "r")
+    okfile = open(config.OKFILE, "r")
     ok_json = json.load(okfile)
     okfile.close()
     try:
@@ -144,13 +140,13 @@ def check_ok(submission_name, test_level, test_no):
 
 def mark_ok_or_not(submission_name, test_level, test_no, okbool):
     global okfile
-    okfile = open(OKFILE, "r")
+    okfile = open(config.OKFILE, "r")
     ok_json = json.load(okfile)
     okfile.close()
     if submission_name not in ok_json.keys():
         ok_json[submission_name] = {}
     ok_json[submission_name][f"{test_level}x{test_no}"] = 1 if okbool else 0
-    okfile = open(OKFILE, "w")
+    okfile = open(config.OKFILE, "w")
     json.dump(ok_json, okfile)
     okfile.close()
 
@@ -170,7 +166,7 @@ def do_comparison(selection, good_out, tests, level):
     print("Here is an overview of which tests passed and failed:")
     print_single_overview(selection, good_out, level)
     print("Which binary would you like to compare against?")
-    comp = select_from_list_by_name(good_out)
+    comp = prompt_select_from_list_by_name(good_out)
     print("which test would you like to compare?")
     i = prompt_list_index(tests)
     comp_test = comp["test_outputs"][i]
@@ -199,25 +195,38 @@ def do_comparison(selection, good_out, tests, level):
             print_color(FAIL, "The good submission timed out while the student's didn't!")
     prompt_ok(selection, level, i)
 
-
 def _prompt_inspect(selection, good_outs, tests, level):
     print(f"What would you like to do with submission '{selection['name']}'? ")
+    print_single_overview(selection, good_outs, level)
     while True:
-        inp = input("[c]ompare outputs against a known good version, [r]eturn to previous menu, or [e]xit the grading program ")
+        inp = input("[v]iew output from a specific test, [c]ompare outputs against a known good version, [o]verview, [r]eturn to inspect a different submission, or [e]xit the grading program ")
+        if inp == "v":
+            print_single_overview(selection, good_outs, level)
+            ind = prompt_list_index(selection["test_outputs"])
+            ind_out = selection["test_outputs"][ind]
+            print("Standard output:")
+            print(f"\t{ind_out['stdout']}")
+            print("Standard error:")
+            print(f"\t{ind_out['stderr']}")
+            print("Program timed out?")
+            print(f"\t{ind_out['timeout']}")
+            prompt_ok(selection, level, ind)
         if inp == "c":
             do_comparison(selection, good_outs, tests, level)
         if inp == "r":
             return
+        if inp == "o":
+            print_single_overview(selection, good_outs, level)
         if inp == "e":
             exit()
 
 def prompt_inspect(outs, good_outs, tests, level):
     while True:
         print("Which submission would you like to inspect?")
-        selection = select_from_list_by_name(outs)
+        selection = prompt_select_from_list_by_name(outs)
         _prompt_inspect(selection, good_outs, tests, level)
         while True:
-            inp = input("[i]nspect another submission, [r]eturn to previous menu, or [e]xit the grading program ")
+            inp = input(f"[i]nspect another submission, [r]eturn to level {level} main grading menu, or [e]xit the grading program ")
             if inp == "i":
                 break
             if inp == "r":
@@ -271,10 +280,10 @@ def search_for_good_match(test_index, output, good_outs):
     return None
 
 def load_bins(lvl):
-    return [f"{os.getcwd()}/{SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{SUBMISSIONS_DIRNAME}/{lvl}") if not x.startswith("good_")]
+    return [f"{os.getcwd()}/{config.SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIRNAME}/{lvl}") if not x.startswith("good_")]
 
 def load_good_bins(lvl):
-    return [f"{os.getcwd()}/{SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{SUBMISSIONS_DIRNAME}/{lvl}") if x.startswith("good_")]
+    return [f"{os.getcwd()}/{config.SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIRNAME}/{lvl}") if x.startswith("good_")]
 
 def run_bins(test_inputs, bins):
     ret = []
@@ -317,10 +326,10 @@ def add_test(tests_json, cur_lvl_name, new_test):
 
     testsfile.close()
     tests_json[cur_lvl_name].append(new_test)
-    testsfile = open(TESTSFILE, 'w')
+    testsfile = open(config.TESTSFILE, 'w')
     json.dump(tests_json, testsfile)
     testsfile.close()
-    testsfile = open(TESTSFILE, 'r')
+    testsfile = open(config.TESTSFILE, 'r')
 
 def do_new_tests(tests_json, cur_lvl_name):
     print("When writing tests, write \\n where you intend for there to be newline/enter character")
@@ -360,14 +369,14 @@ def prompt_intro(tests):
 def main():
     global testsfile
     print("Welcome to the kdlp grading system!")
-    testsfile = open(TESTSFILE, 'r')
+    testsfile = open(config.TESTSFILE, 'r')
     tests = json.load(testsfile)
     while True:
         prompt_intro(tests)
         lvl = prompt_level(tests)
         prompt_new_tests(tests, lvl)
         testsfile.close()
-        testsfile = open(TESTSFILE, 'r')
+        testsfile = open(config.TESTSFILE, 'r')
         tests = json.load(testsfile)
         bins = load_bins(lvl)
         good = load_good_bins(lvl)
