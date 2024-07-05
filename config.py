@@ -1,3 +1,4 @@
-SUBMISSIONS_DIRNAME = "submissions"
+SUBMISSIONS_DIR = "submissions"
 TESTSFILE = "tests.json"
 OKFILE = "oks.json"
+REPORTS_DIR = "reports"
