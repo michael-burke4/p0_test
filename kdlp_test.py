@@ -294,24 +294,41 @@ def run_bins(test_inputs, bins):
 def generate_report():
     with open(config.TESTSFILE, 'r') as testsfile:
         tests = json.load(testsfile)
+
+    level_names = get_level_names()
+    student_names = get_student_names()
+    student_names.append("possible_points")
+    df = pd.DataFrame(index=student_names, columns=level_names)
+    
     for level in tests:
-        df = pd.DataFrame()
         bins = load_bins(level)
         good_bins = load_good_bins(level)
         student_outs = run_bins(tests[level], bins)
         good_outs = run_bins(tests[level], good_bins)
         for sub in student_outs:
-            student_col = []
             i = 0
+            level_score = 0
             for output in sub["test_outputs"]:
                 goodness = find_goodness(output, good_outs, sub["name"], level, i)
-                if goodness[1] == None or goodness[1] == 0:
-                    student_col.append(0)
-                else:
-                    student_col.append(1)
+                if goodness[1] != None and goodness[1] != 0:
+                    level_score += 1
                 i += 1
-            df.insert(0, sub["name"], student_col)
-        df.to_csv(f"{config.REPORTS_DIR}/{level}.csv")
+            df.at[sub["name"], level] = level_score
+            df.at["possible_points", level] = i
+    df.to_csv(f"{config.REPORT}")
+
+def get_level_names():
+    with os.scandir(config.SUBMISSIONS_DIR) as d:
+        return [x.name for x in d]
+
+def get_student_names():
+    names_list = []
+    for _, _, files in os.walk(config.SUBMISSIONS_DIR):
+        for f in files:
+            if f not in names_list and not f.startswith("good_"):
+                names_list.append(f)
+    return names_list
+        
 
 def add_test(tests_json, cur_lvl_name, new_test):
     tests_json[cur_lvl_name].append(new_test)
@@ -392,13 +409,9 @@ def preflight_checks():
     # Make sure tests file exists, OKFILE exists,
     # Make sure the submissions dir exists and isn't empty
     # Make sure test levels and submissions dir levels are equal
-    # If reports dir doesn't exist, make it
     make_empty_json_if_no_file(config.TESTSFILE)
     make_empty_json_if_no_file(config.OKFILE)
     check_submissions_dir()
-    if not os.path.exists(config.REPORTS_DIR):
-        print_color(WARNING, f"Reports directory '{config.REPORTS_DIR}' did not exist. The directory has now been created automatically.")
-        os.makedirs(config.REPORTS_DIR)
 
 def main():
     print("Welcome to the kdlp grading system!")
