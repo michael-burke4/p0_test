@@ -270,10 +270,10 @@ def search_for_good_match(test_index, output, good_outs):
     return None
 
 def load_bins(lvl):
-    return [f"{os.getcwd()}/{config.SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIRNAME}/{lvl}") if not x.startswith("good_")]
+    return [f"{config.SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIRNAME}/{lvl}") if not x.startswith("good_")]
 
 def load_good_bins(lvl):
-    return [f"{os.getcwd()}/{config.SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIRNAME}/{lvl}") if x.startswith("good_")]
+    return [f"{config.SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIRNAME}/{lvl}") if x.startswith("good_")]
 
 def run_bins(test_inputs, bins):
     ret = []
