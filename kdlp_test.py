@@ -270,10 +270,10 @@ def search_for_good_match(test_index, output, good_outs):
     return None
 
 def load_bins(lvl):
-    return [f"{config.SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIRNAME}/{lvl}") if not x.startswith("good_")]
+    return [f"{config.SUBMISSIONS_DIR}/{lvl}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIR}/{lvl}") if not x.startswith("good_")]
 
 def load_good_bins(lvl):
-    return [f"{config.SUBMISSIONS_DIRNAME}/{lvl}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIRNAME}/{lvl}") if x.startswith("good_")]
+    return [f"{config.SUBMISSIONS_DIR}/{lvl}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIR}/{lvl}") if x.startswith("good_")]
 
 def run_bins(test_inputs, bins):
     ret = []
@@ -311,7 +311,7 @@ def generate_report():
                     student_col.append(1)
                 i += 1
             df.insert(0, sub["name"], student_col)
-        df.to_csv(f"reports/{level}.csv")
+        df.to_csv(f"{config.REPORTS_DIR}/{level}.csv")
 
 def add_test(tests_json, cur_lvl_name, new_test):
     tests_json[cur_lvl_name].append(new_test)
