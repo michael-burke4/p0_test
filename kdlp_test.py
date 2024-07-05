@@ -355,8 +355,54 @@ def prompt_intro():
         elif inp == "e":
             exit()
 
+def make_empty_json_if_no_file(path):
+    if not os.path.exists(path):
+        with open(path, 'w') as f:
+            json.dump({}, f)
+            print_color(WARNING, f"File '{path}' did not exist. Empty JSON file created in its place")
+
+# PRECONDITION: Before calling this, ensure the config.TESTSFILE exists.
+def check_submissions_dir():
+    if not os.path.exists(config.SUBMISSIONS_DIR):
+        print_color(WARNING, f"Submissions directory '{config.SUBMISSIONS_DIR}' did not exist. This directory has now been created automatically.")
+        print_color(WARNING, "Populate this directory before running kdlp test again.")
+        os.makedirs(config.SUBMISSIONS_DIR)
+        exit()
+    with open(config.TESTSFILE, 'r') as testsfile:
+        tests = json.load(testsfile)
+    keys = list(tests.keys())
+    with os.scandir(config.SUBMISSIONS_DIR) as d:
+        for entry in d:
+            if not entry.is_dir():
+                print_color(FAIL, f"Error! Found non-directory file '{entry.name}' in {config.SUBMISSIONS_DIR}. Remove ALL non-directory files from {config.SUBMISSIONS_DIR}.")
+                exit()
+            try:
+                keys.remove(entry.name)
+            except:
+                print_color(FAIL, f"Error! test level '{entry.name}' has no entry in {config.TESTSFILE}. "\
+                "Ensure the testfile and the submissions directory have the same number of test levels and that the names are the same")
+                exit()
+        if not keys == []:
+            plrl = len(keys) != 1
+            print_color(FAIL, f"Error! The following test level{'s' if plrl else ''} {keys} {'have' if plrl else 'has'}"\
+            f" no corresponding director{'ies' if plrl else 'y'} in '{config.SUBMISSIONS_DIR}'.")
+            exit()
+
+def preflight_checks():
+    # Make sure tests file exists, OKFILE exists,
+    # Make sure the submissions dir exists and isn't empty
+    # Make sure test levels and submissions dir levels are equal
+    # If reports dir doesn't exist, make it
+    make_empty_json_if_no_file(config.TESTSFILE)
+    make_empty_json_if_no_file(config.OKFILE)
+    check_submissions_dir()
+    if not os.path.exists(config.REPORTS_DIR):
+        print_color(WARNING, f"Reports directory '{config.REPORTS_DIR}' did not exist. The directory has now been created automatically.")
+        os.makedirs(config.REPORTS_DIR)
+
 def main():
     print("Welcome to the kdlp grading system!")
+    preflight_checks()
     while True:
         prompt_intro()
         with open(config.TESTSFILE, 'r') as testsfile:
