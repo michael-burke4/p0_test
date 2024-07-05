@@ -194,6 +194,7 @@ def _prompt_inspect(selection, good_outs, tests, level):
             print_single_overview(selection, good_outs, level)
             ind = prompt_list_index(selection["test_outputs"])
             ind_out = selection["test_outputs"][ind]
+            print_color(OKCYAN, f"test input:\t{bytes(tests[ind], 'UTF-8')}")
             print("Standard output:")
             print(f"\t{ind_out['stdout']}")
             print("Standard error:")
