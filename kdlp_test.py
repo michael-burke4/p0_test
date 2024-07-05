@@ -243,17 +243,16 @@ def find_goodness(output, good_outputs, submission_name, level, test_no):
         return ("automatic", match)
 
 def print_goodness(goodness):
-    match goodness[0]:
-        case "manual":
-            if goodness[1] == 1:
-                print_color(OKBLUE, f"Manually marked OK!")
-            else:
-                print_color(FAIL, f"{BOLD}Manually marked NOT OK!")
-        case "automatic":
-            if goodness[1] is None:
-                print_color(FAIL, "Output did not match any known good outputs!")
-            else:
-                print_color(OKGREEN, f"Output matches with {goodness[1]}")
+    if goodness[0] == "manual":
+        if goodness[1] == 1:
+            print_color(OKBLUE, f"Manually marked OK!")
+        else:
+            print_color(FAIL, f"{BOLD}Manually marked NOT OK!")
+    elif goodness[0] == "automatic":
+        if goodness[1] is None:
+            print_color(FAIL, "Output did not match any known good outputs!")
+        else:
+            print_color(OKGREEN, f"Output matches with {goodness[1]}")
 
 def print_single_overview(out, good_outs, level):
     i = 0
