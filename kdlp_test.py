@@ -11,9 +11,6 @@ import time
 import pandas as pd
 import config
 
-testsfile = None
-okfile = None
-
 # https://stackoverflow.com/a/287944
 HEADER = '\033[95m'
 OKBLUE = '\033[94m'
@@ -127,28 +124,21 @@ def prompt_list_index(li):
             pass
 
 def check_ok(submission_name, test_level, test_no):
-    global okfile
-    if okfile is not None:
-        okfile.close()
-    okfile = open(config.OKFILE, "r")
-    ok_json = json.load(okfile)
-    okfile.close()
+    with open(config.OKFILE, "r") as okfile:
+        ok_json = json.load(okfile)
     try:
         return ok_json[submission_name][f"{test_level}x{test_no}"]
     except:
         return None
 
 def mark_ok_or_not(submission_name, test_level, test_no, okbool):
-    global okfile
-    okfile = open(config.OKFILE, "r")
-    ok_json = json.load(okfile)
-    okfile.close()
+    with open(config.OKFILE, "r") as okfile:
+        ok_json = json.load(okfile)
     if submission_name not in ok_json.keys():
         ok_json[submission_name] = {}
     ok_json[submission_name][f"{test_level}x{test_no}"] = 1 if okbool else 0
-    okfile = open(config.OKFILE, "w")
-    json.dump(ok_json, okfile)
-    okfile.close()
+    with open(config.OKFILE, "w") as okfile:
+        json.dump(ok_json, okfile)
 
 def prompt_ok(submission, test_level, test_no):
     while True:
@@ -300,11 +290,13 @@ def run_bins(test_inputs, bins):
         ret.append(entry)
     return ret
 
-def generate_report(tests):
+def generate_report():
+    with open(config.TESTSFILE, 'r') as testsfile:
+        tests = json.load(testsfile)
     for level in tests:
         df = pd.DataFrame()
         bins = load_bins(level)
-        good_bins = load_bins(level)
+        good_bins = load_good_bins(level)
         student_outs = run_bins(tests[level], bins)
         good_outs = run_bins(tests[level], good_bins)
         for sub in student_outs:
@@ -321,14 +313,9 @@ def generate_report(tests):
         df.to_csv(f"reports/{level}.csv")
 
 def add_test(tests_json, cur_lvl_name, new_test):
-    global testsfile
-
-    testsfile.close()
     tests_json[cur_lvl_name].append(new_test)
-    testsfile = open(config.TESTSFILE, 'w')
-    json.dump(tests_json, testsfile)
-    testsfile.close()
-    testsfile = open(config.TESTSFILE, 'r')
+    with open(config.TESTSFILE, 'w') as testsfile:
+        json.dump(tests_json, testsfile)
 
 def do_new_tests(tests_json, cur_lvl_name):
     print("When writing tests, write \\n where you intend for there to be newline/enter character")
@@ -347,44 +334,44 @@ def do_new_tests(tests_json, cur_lvl_name):
                     break
         add_test(tests_json, cur_lvl_name, new_test)
 
-def prompt_new_tests(tests_json, cur_lvl_name):
+def prompt_new_tests(cur_lvl_name):
+    with open(config.TESTSFILE, 'r') as testsfile:
+        tests = json.load(testsfile)
     while True:
         inp = input("Would you like to write any new tests in this level? [y/n]: ")
         if inp == "y":
-            do_new_tests(tests_json, cur_lvl_name)
+            do_new_tests(tests, cur_lvl_name)
         elif inp == "n":
             return
 
-def prompt_intro(tests):
-    inp = input("[g]rade submissions, generate a [r]eport, or [e]xit: ")
-    if inp == "g":
-        return
-    elif inp == "r":
-        generate_report(tests)
-        exit()
-    elif inp == "e":
-        exit()
+def prompt_intro():
+    while True:
+        inp = input("[g]rade submissions, generate a [r]eport, or [e]xit: ")
+        if inp == "g":
+            return
+        elif inp == "r":
+            generate_report()
+        elif inp == "e":
+            exit()
 
 def main():
-    global testsfile
     print("Welcome to the kdlp grading system!")
-    testsfile = open(config.TESTSFILE, 'r')
-    tests = json.load(testsfile)
     while True:
-        prompt_intro(tests)
+        prompt_intro()
+        with open(config.TESTSFILE, 'r') as testsfile:
+            tests = json.load(testsfile)
         lvl = prompt_level(tests)
-        prompt_new_tests(tests, lvl)
-        testsfile.close()
-        testsfile = open(config.TESTSFILE, 'r')
-        tests = json.load(testsfile)
-        bins = load_bins(lvl)
-        good = load_good_bins(lvl)
-        cur_tests = tests[lvl]
-        print("OK! running tests...")
-        outs = run_bins(cur_tests, bins)
-        good_outs = run_bins(cur_tests, good)
-        print("Tests complete!")
-        prompt_grading(outs, good_outs, lvl, cur_tests)
+        prompt_new_tests(lvl)
+        with open(config.TESTSFILE, 'r') as testsfile:
+            tests = json.load(testsfile)
+            bins = load_bins(lvl)
+            good = load_good_bins(lvl)
+            cur_tests = tests[lvl]
+            print("OK! running tests...")
+            outs = run_bins(cur_tests, bins)
+            good_outs = run_bins(cur_tests, good)
+            print("Tests complete!")
+            prompt_grading(outs, good_outs, lvl, cur_tests)
 
 if __name__ == '__main__':
     main()
