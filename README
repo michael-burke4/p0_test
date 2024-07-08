@@ -2,21 +2,29 @@ Welcome to the KDLP grading program!
 
 This is currently only intended for use with P0.
 
+
+
 SUBMISSIONS_DIR:
 Each level of P0 should have its own directory within the SUBMISSIONS_DIR (which can be specified in config.py).
 
 Each level should contain compiled binaries of the student submissions from each corresponding level.
-Student A's compiled binary at level 0 completion should be in the same directory as Student B's submission for level 0 completion, Student C's level 0, and so on.
 
-The specific names you give the test levels is unimportant, the only thing that matters is that the names of the levels in the TESTSFILE exactly matches the names of the directories in SUBMISSIONS_DIR.
+If you intend to generate a report while using multi-binary grading mode, you must keep the names of student's binaries consistent between levels. As in: in the
+level 0 directory, student A's binary should have the same name as it has in level 1, level2, level 3, and so on.
+
+The specific name you give each test level is unimportant, what matters is that the names of the levels in the TESTSFILE exactly matches the names of the directories in SUBMISSIONS_DIR.
+
+
 
 TESTFILE:
 The complete suite of tests should be put into the TESTSFILE. TESTSFILE should be a json file. The format is simple:
 {
   "LevelName0" : ["Array", "full", "of", "tests", "for", "LevelName0"],
-  "LevelName1" : ["Array", "full", "of", "tests", "for", "LevelName0"],
+  "LevelName1" : ["Array", "full", "of", "tests", "for", "LevelName1"],
   ...
 }
+
+Ensure that "LevelName0" matches with the name of the corresponding directory of submissions in SUBMISSIONS_DIR.
 
 Since P0 is all about making a shell, individidual tests within a level take the form of a string. This string represents input into the shell.
 Using a shell involves entering a command and pressing enter: to replicate that with this testing program, write your command into that string, then type '\n' to denote a newline.
@@ -27,7 +35,8 @@ $ cat /tmp/example/file.txt
 The corresponding string for use in this test program is:
 "mkdir /tmp/example\necho hello > /tmp/example/file.txt\ncat /tmp/example/file.txt\n"
 
-The current implementation of inputting new commands from within the grading program has some minor quirks:
+The current implementation of inputting new commands from within the grading program has some minor quirks.
+You can manually edit the tests json file if you prefer that approach.
 1. If you want the entire test string to be just "q" with no trailing newline, this is not possible.
     Inputting q and pressing enter is how you quit that menu. You would have to manually add this to your json TESTSFILE if you really wanted it.
 2. The "create new tests" input menu may be counterintuitive when it comes to escaping characters: the only escape character that is accounted for is the string "\n" which is turned into a single
@@ -35,8 +44,48 @@ The current implementation of inputting new commands from within the grading pro
     a programming language ("\\").
     Quote characters do not need to be escaped within the grading program, but do need to be escaped if writing directly into the JSON with a text editor.
 
+    Put simply: python needs to parse the json file, and the "standard string rules" apply there.
+    The only manipulation this program's test input menu does is a simple find and replace with \n to a literal newline.
+
+
+
 OKFILE:
 The OKFILE is a json file that stores which submissions have test outputs that manually get marked as OK or NOT OK.
 If something is implemented incorrectly by a student, but it just so happens that is shares output with one of the known good binaries, that test should be manually marked as NOT OK.
 If a student's output very closely matches one or more of the good binaries, but is slightly off by whitespace or something, it can be manually marked as OK.
     Alternatively, compile new versions of the known good programs that account for minor, insignifcant differences. Do this at your own discretion!
+
+
+
+REPORT:
+This program can generate a csv report of each submission name and the grade they got for each level. The bottom row represents the total number of tests done within a test level, and it is assumed
+that each test within a level has the same weight. The weights of different levels is to be determined by the grader.
+
+The generation of the report does take into account the values within the OKFILE. Both an automatically graded good test result and a manual ok count as 1 point,
+automatic fail and manual not ok mean 0 points rewarded for that test.
+
+All calculations are left to the grader.
+
+
+
+SINGLE VS MULTI BINARY MODE:
+When grading, you can choose to grade in either
+multi-binary mode:
+	Grade each stage by using a binary specifically designed to complete that stage.
+or
+single-binary mode:
+	Grade binaries compiled for a single stage against all test levels.
+
+If you choose single-binary mode, you still have to create a directory for each grading level, but it doesn't actually matter that those directories be occupied with any binaries.
+
+If you choose level 9 for example and some students didn't submit all the way up to level 9, you may have to take the highest level they did complete and put it into the level 9 directory. Otherwise
+their work won't be reviewed at all.
+
+
+
+A (POTENTIALLY) USEFUL TIP:
+These shell programs are expected terminate only after the 'exit' command is issued.
+If no exit is issued or if the binary being tested gets stuck in a loop, the program will automatically be timed out after a set delay period.
+This period may require some manipulation. If you want to run some tests that will take longer, adjust it up.
+Be cautious when adjusting it down, as you may exit the program prematurely.
+The timeout is currently manually set to .32 seconds in tty_capture(), this may change in the future.
