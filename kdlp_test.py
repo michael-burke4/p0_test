@@ -22,6 +22,8 @@ ENDC = '\033[0m'
 BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
 
+grading_mode_is_single = 0
+single_level = None
 
 def print_color(color_tag, *args, ending='\n'):
     print(color_tag, end='')
@@ -79,8 +81,8 @@ def tty_capture(cmd, bytes_input, output_bytes=2048):
         p.wait()
     return result[mo], result[me], timed
 
-def prompt_level(tests):
-    keys = tests.keys()
+def prompt_level():
+    keys = get_level_names()
     ret = None
     for key in keys:
         print(key)
@@ -270,10 +272,16 @@ def search_for_good_match(test_index, output, good_outs):
     return None
 
 def load_bins(lvl):
-    return [f"{config.SUBMISSIONS_DIR}/{lvl}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIR}/{lvl}") if not x.startswith("good_")]
+    global grading_mode_is_single
+    global single_level
+    level = lvl if not grading_mode_is_single else single_level
+    return [f"./{config.SUBMISSIONS_DIR}/{level}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIR}/{level}") if not x.startswith("good_")]
 
 def load_good_bins(lvl):
-    return [f"{config.SUBMISSIONS_DIR}/{lvl}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIR}/{lvl}") if x.startswith("good_")]
+    global grading_mode_is_single
+    global single_level
+    level = lvl if not grading_mode_is_single else single_level
+    return [f"./{config.SUBMISSIONS_DIR}/{level}/{x}" for x in os.listdir(f"./{config.SUBMISSIONS_DIR}/{level}") if x.startswith("good_")]
 
 def run_bins(test_inputs, bins):
     ret = []
@@ -363,12 +371,18 @@ def prompt_new_tests(cur_lvl_name):
             return
 
 def prompt_intro():
+    global grading_mode_is_single
+    global single_level
+
     while True:
-        inp = input("[g]rade submissions, generate a [r]eport, or [e]xit: ")
+        inp = input(f"[g]rade submissions, generate a [r]eport, [t]oggle between single-/multi-binary grading mode (currently {'single' if grading_mode_is_single else 'multi'}), or [e]xit: ")
         if inp == "g":
             return
         elif inp == "r":
             generate_report()
+        elif inp == "t":
+            grading_mode_is_single = not grading_mode_is_single
+            single_level = prompt_level()
         elif inp == "e":
             exit()
 
@@ -420,7 +434,7 @@ def main():
         prompt_intro()
         with open(config.TESTSFILE, 'r') as testsfile:
             tests = json.load(testsfile)
-        lvl = prompt_level(tests)
+        lvl = prompt_level()
         prompt_new_tests(lvl)
         with open(config.TESTSFILE, 'r') as testsfile:
             tests = json.load(testsfile)
