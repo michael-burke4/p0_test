@@ -50,14 +50,14 @@ def tty_capture(cmd, bytes_input, output_bytes=2048):
         os.close(fd)
     os.write(mi, bytes_input)
 
-    timeout = 0.04  # seconds
+    timeout = 0.32  # seconds
     timed = False
     readable = [mo, me]
     result = {mo: b'', me: b''}
     tm = time.time()
     try:
         while readable:
-            if time.time() - tm > timeout * 8:
+            if time.time() - tm > timeout:
                 timed = True
                 break
             ready, _, _ = select.select(readable, [], [], timeout)
