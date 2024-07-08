@@ -307,7 +307,7 @@ def generate_report():
     student_names = get_student_names()
     student_names.append("possible_points")
     df = pd.DataFrame(index=student_names, columns=level_names)
-    
+
     for level in tests:
         bins = load_bins(level)
         good_bins = load_good_bins(level)
@@ -336,7 +336,7 @@ def get_student_names():
             if f not in names_list and not f.startswith("good_"):
                 names_list.append(f)
     return names_list
-        
+
 
 def add_test(tests_json, cur_lvl_name, new_test):
     tests_json[cur_lvl_name].append(new_test)
