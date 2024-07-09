@@ -320,7 +320,7 @@ def generate_report():
             df.at[sub["name"], level] = level_score
             df.at["possible_points", level] = i
     df = df.reindex(sorted(df.columns), axis=1)
-    df = df.infer_objects(copy=False).fillna(0)
+    df = df.infer_objects(copy=False).fillna(0.)
     df.to_csv(f"{config.REPORT}")
 
 def get_level_names():
