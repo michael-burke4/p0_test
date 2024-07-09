@@ -142,10 +142,23 @@ def mark_ok_or_not(submission_name, test_level, test_no, okbool):
     with open(config.OKFILE, "w") as okfile:
         json.dump(ok_json, okfile)
 
+def remove_okness(submission_name, test_level, test_no):
+    with open(config.OKFILE, "r") as okfile:
+        ok_json = json.load(okfile)
+    try:    
+        del ok_json[submission_name][f"{test_level}x{test_no}"]
+    except KeyError:
+        return
+    with open(config.OKFILE, "w") as okfile:
+        json.dump(ok_json, okfile)
+
 def prompt_ok(submission, test_level, test_no):
     while True:
-        inp = input("[c]ontinue and leave this test's status as it is, manually mark as [o]k, or manually mark as [n]ot ok ")
+        inp = input("[c]ontinue and leave this test's status as it is, [r]emove any manual OK/NOT OK mark,  manually mark as [o]k, or manually mark as [n]ot ok ")
         if inp == "c":
+            return
+        if inp == "r":
+            remove_okness(submission["name"], test_level, test_no)
             return
         if inp == "o":
             mark_ok_or_not(submission["name"], test_level, test_no, True)
