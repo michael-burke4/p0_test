@@ -155,12 +155,10 @@ def prompt_ok(submission, test_level, test_no):
             return
 
 def do_comparison(selection, good_out, tests, level):
-    print("Here is an overview of which tests passed and failed:")
-    print_single_overview(selection, good_out, level)
-    print("Which binary would you like to compare against?")
-    comp = prompt_select_from_list_by_name(good_out)
     print("which test would you like to compare?")
     i = prompt_list_index(tests)
+    print("Which binary would you like to compare against?")
+    comp = prompt_select_from_list_by_name(good_out)
     comp_test = comp["test_outputs"][i]
     select_test = selection["test_outputs"][i]
     print_color(OKCYAN, f"test input:\t{bytes(tests[i], 'UTF-8')}")
@@ -193,7 +191,6 @@ def _prompt_inspect(selection, good_outs, tests, level):
     while True:
         inp = input("[v]iew output from a specific test, [c]ompare outputs against a known good version, [o]verview, [r]eturn to inspect a different submission, or [e]xit the grading program ")
         if inp == "v":
-            print_single_overview(selection, good_outs, level)
             ind = prompt_list_index(selection["test_outputs"])
             ind_out = selection["test_outputs"][ind]
             print_color(OKCYAN, f"test input:\t{bytes(tests[ind], 'UTF-8')}")
@@ -302,12 +299,11 @@ def run_bins(test_inputs, bins):
 def generate_report():
     with open(config.TESTSFILE, 'r') as testsfile:
         tests = json.load(testsfile)
-
     level_names = get_level_names()
     student_names = get_student_names()
+    student_names.sort()
     student_names.append("possible_points")
     df = pd.DataFrame(index=student_names, columns=level_names)
-
     for level in tests:
         bins = load_bins(level)
         good_bins = load_good_bins(level)
@@ -315,14 +311,16 @@ def generate_report():
         good_outs = run_bins(tests[level], good_bins)
         for sub in student_outs:
             i = 0
-            level_score = 0
+            level_score = 0.
             for output in sub["test_outputs"]:
                 goodness = find_goodness(output, good_outs, sub["name"], level, i)
                 if goodness[1] != None and goodness[1] != 0:
-                    level_score += 1
+                    level_score += 1.
                 i += 1
             df.at[sub["name"], level] = level_score
             df.at["possible_points", level] = i
+    df = df.reindex(sorted(df.columns), axis=1)
+    df = df.infer_objects(copy=False).fillna(0)
     df.to_csv(f"{config.REPORT}")
 
 def get_level_names():
