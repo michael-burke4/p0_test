@@ -41,6 +41,8 @@ class State:
         self.connections[connection.letter] = connection
 
     def prompt_connection(self):
+        if len(self.connections) == 1:
+            return self.connections[next(iter(self.connections))].to_state
         i = None
         while True:
             print_header('Available actions:')

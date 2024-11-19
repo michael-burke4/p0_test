@@ -64,18 +64,25 @@ def add_tests():
         db.Test.create(level=level, test_text=new_test)
 
 
+def show_level():
+    print_header(f'Currently selected level: {level}')
+
+
 begin = State()
 level_select = State(action=select_level)
+at_level = State(action=show_level)
 new_tests = State(action=add_tests)
 end = State(stop=True)
 
 q = Connection('[q]uit this program', end)
 to_level_select = Connection('select a [l]evel to grade', level_select)
 to_new_tests = Connection('add [n]ew tests to the current level', new_tests)
+to_at_level = Connection('return to [c]urrent level menu', at_level)
 
 begin.add_connections([to_level_select, q])
-level_select.add_connections([to_level_select, to_new_tests, q])
-new_tests.add_connections([to_level_select, q])
+level_select.add_connection(to_at_level)
+at_level.add_connections([to_level_select, to_new_tests, q])
+new_tests.add_connection(to_at_level)
 
 cur_state = begin
 while not cur_state.stop:
