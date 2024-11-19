@@ -3,11 +3,16 @@
 import config
 import os
 
+from preflight_checks import check_everything
 from print_color import print_fail, print_header
 from sm import Connection, State
 
 
 level = None
+
+
+if not check_everything():
+    exit(1)
 
 
 def select_level():
