@@ -10,7 +10,7 @@ class Connection:
         self.to_state = to_state
 
     def extract_command_letter(self):
-        pat = r'\[(.)\]'
+        pat = r'\[(.+)\]'
         matches = re.findall(pat, self.cmd_string)
         if (le := len(matches)) != 1:
             raise BufferError('Command string expects exactly 1 specifier'
