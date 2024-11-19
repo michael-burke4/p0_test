@@ -1,24 +1,40 @@
 #!/usr/bin/env python3
 
+import config
+import os
+
+from print_color import print_fail, print_header
 from sm import Connection, State
 
 
-def print_hi():
-    print('hi!')
+level = None
 
 
-if __name__ == '__main__':
-    quit_state = State()
-    s1 = State()
-    s2 = State()
-    qt = Connection('[q]uit this program', quit_state, action=exit)
-    one = Connection('state [1]', s1)
-    two = Connection('state [2]', s2, action=print_hi)
-
-    s1.add_connections([two, qt])
-    s2.add_connections([one, qt])
-
-    cur_state = s1
-
+def select_level():
     while True:
-        cur_state = cur_state.prompt_connection()
+        print_header('Select a level to grade... ')
+        for f in os.listdir(config.SUBSDIR):
+            print(f'\t{f}')
+        inp = input('')
+        if inp in os.listdir(config.SUBSDIR):
+            level = inp
+            print(f'Proceeding to grade level {level}...')
+            break
+        else:
+            print_fail(f'{inp} not in {config.SUBSDIR}')
+
+
+begin = State()
+level_select = State(action=select_level)
+end = State(action=exit)
+
+q = Connection('[q]uit this program', end)
+to_level_select = Connection('select a [l]evel to grade', level_select)
+
+begin.add_connections([to_level_select, q])
+level_select.add_connections([to_level_select, q])
+
+cur_state = begin
+while True:
+    cur_state.arrive()
+    cur_state = cur_state.prompt_connection()
