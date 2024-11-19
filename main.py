@@ -7,7 +7,7 @@ import peewee
 import db
 
 from preflight_checks import check_everything
-from print_color import print_fail, print_header, print_warning
+from print_color import print_fail, print_header, print_warning, print_okblue
 from sm import Connection, State
 
 
@@ -64,6 +64,12 @@ def add_tests():
         db.Test.create(level=level, test_text=new_test)
 
 
+def print_tests():
+    print_okblue(f'Here are all of the tests at level {level}')
+    for t in db.Test.select().where(db.Test.level == level):
+        print(f'\t{t.test_text}')
+
+
 def show_level():
     print_header(f'Currently selected level: {level}')
 
@@ -72,17 +78,21 @@ begin = State()
 level_select = State(action=select_level)
 at_level = State(action=show_level)
 new_tests = State(action=add_tests)
+test_printer = State(action=print_tests)
 end = State(stop=True)
 
 q = Connection('[q]uit this program', end)
 to_level_select = Connection('select a [l]evel to grade', level_select)
 to_new_tests = Connection('add [n]ew tests to the current level', new_tests)
 to_at_level = Connection('return to [c]urrent level menu', at_level)
+to_test_printer = Connection('[li]st all of the tests at the current level',
+                             test_printer)
 
 begin.add_connections([to_level_select, q])
 level_select.add_connection(to_at_level)
-at_level.add_connections([to_level_select, to_new_tests, q])
+at_level.add_connections([to_level_select, to_new_tests, to_test_printer, q])
 new_tests.add_connection(to_at_level)
+test_printer.add_connection(to_at_level)
 
 cur_state = begin
 while not cur_state.stop:

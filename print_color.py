@@ -27,3 +27,7 @@ def print_fail(*args, end='\n'):
 
 def print_header(*args, end='\n'):
     print_color(HEADER, *args, end=end)
+
+
+def print_okblue(*args, end='\n'):
+    print_color(OKBLUE, *args, end=end)
