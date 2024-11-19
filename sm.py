@@ -1,6 +1,6 @@
 import re
 
-from print_color import print_fail
+from print_color import print_fail, print_header
 
 
 class Connection:
@@ -56,9 +56,9 @@ class State:
     def prompt_connection(self):
         i = None
         while True:
-            print('Available actions:')
+            print_header('Available actions:')
             for c in self.connections:
-                print(self.connections[c].cmd_string)
+                print(f'\t{self.connections[c].cmd_string}')
             i = input('Select an action to perform... ')
             con = None
             try:

@@ -23,3 +23,7 @@ def print_warning(*args, end='\n'):
 
 def print_fail(*args, end='\n'):
     print_color(FAIL, *args, end=end)
+
+
+def print_header(*args, end='\n'):
+    print_color(HEADER, *args, end=end)
