@@ -67,7 +67,7 @@ def add_tests():
 begin = State()
 level_select = State(action=select_level)
 new_tests = State(action=add_tests)
-end = State(action=exit)
+end = State(stop=True)
 
 q = Connection('[q]uit this program', end)
 to_level_select = Connection('select a [l]evel to grade', level_select)
@@ -78,6 +78,6 @@ level_select.add_connections([to_level_select, to_new_tests, q])
 new_tests.add_connections([to_level_select, q])
 
 cur_state = begin
-while True:
+while not cur_state.stop:
     cur_state.arrive()
     cur_state = cur_state.prompt_connection()

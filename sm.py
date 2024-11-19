@@ -22,10 +22,11 @@ class Connection:
 
 
 class State:
-    def __init__(self, action=None, connections=None):
+    def __init__(self, action=None, connections=None, stop=False):
         self.connections = {}
         self.action = action
         self.add_connections(connections)
+        self.stop = stop
 
     def add_connections(self, connections):
         if not connections:
