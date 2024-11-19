@@ -1,2 +1,2 @@
-WORKDIR = './workdir'
-SUBSDIR = f'{WORKDIR}/submissions'
+GRADINGDIR = './grading'
+SUBSDIR = f'{GRADINGDIR}/submissions'
