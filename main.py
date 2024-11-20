@@ -13,11 +13,11 @@ from sm import State
 
 level = None
 
-db.db.connect()
-db.db.create_tables(peewee.Model.__subclasses__(), safe=True)
-
 if not check_everything():
     exit(1)
+
+db.db.connect()
+db.db.create_tables(peewee.Model.__subclasses__(), safe=True)
 
 
 def select_level():
