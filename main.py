@@ -141,9 +141,23 @@ def run_cur_level_tests():
     leveldir = f'{config.SUBSDIR}/{level}'
     names = os.listdir(leveldir)
 
-    tests_q = db.Test.select().where(db.Test.level == level)
+    if len(names) == 0:
+        print_fail(f'There are no binaries in {leveldir}. Populate this '
+                   'directory before trying again.')
+        return
 
-    for name in [n for n in names if n.startswith('good_')]:
+    tests_q = db.Test.select().where(db.Test.level == level)
+    if tests_q.count() == 0:
+        print_fail(f'There are no tests at level {level}')
+        return
+
+    good_names = [n for n in names if n.startswith('good_')]
+    if len(good_names) == 0:
+        print_warning(f'No known-good binaries were found in {leveldir}. '
+                      'It will appear as though all submissions at this '
+                      'level are wrong.')
+
+    for name in good_names:
         create_submitter_if_needed(name)
         for test in tests_q:
             res = db.Result.get_or_create(submitter=name, level=level, test=test)[0]  # NOQA: 501
