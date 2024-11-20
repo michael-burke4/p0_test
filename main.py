@@ -12,7 +12,8 @@ import time
 import db
 
 from preflight_checks import check_everything
-from print_color import print_fail, print_header, print_warning, print_okblue
+from print_color import (print_fail, print_header, print_warning, print_okblue,
+                         print_okcyan)
 from sm import State
 
 
@@ -194,6 +195,12 @@ def run_test(bin_path, test):
     return [res[0].decode('utf-8'), res[1].decode('utf-8'), res[2]]
 
 
+def run_all_tests():
+    print_okcyan('This may take a while...')
+    for level in sorted(os.listdir(config.SUBSDIR)):
+        run_level_tests(level)
+
+
 begin = State('return to the [m]ain menu of this program')
 level_select = State('select a [l]evel to grade', action=select_level)
 at_level = State('[v]iew possible actions at current level', action=show_level)
@@ -202,15 +209,18 @@ tests_printer = State('list all of the [tests] at the current level',
                       action=print_tests)
 run_tests = State('[r]un all tests at this level against all binaries',
                   action=lambda: run_level_tests(level))
+run_all_tests = State('run [all] tests at all levels against all binaries',
+                      action=run_all_tests)
 end = State('[q]uit this program', stop=True)
 
-begin.add_connections([level_select, end])
+begin.add_connections([level_select, run_all_tests, end])
 level_select.add_connection(at_level)
 at_level.add_connections([level_select, run_tests, new_tests, tests_printer,
                          end])
 new_tests.add_connection(at_level)
 tests_printer.add_connection(at_level)
 run_tests.add_connection(at_level)
+run_all_tests.add_connection(begin)
 
 cur_state = begin
 while not cur_state.stop:

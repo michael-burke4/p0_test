@@ -31,3 +31,7 @@ def print_header(*args, end='\n'):
 
 def print_okblue(*args, end='\n'):
     print_color(OKBLUE, *args, end=end)
+
+
+def print_okcyan(*args, end='\n'):
+    print_color(OKCYAN, *args, end=end)
