@@ -50,9 +50,11 @@ def add_tests():
             return
         if not new_test.endswith('\\n'):
             while True:
-                inp = input('Your new test is missing a terminal newline '
-                            'character. Add one now? [y/n] (your test will '
-                            'likely timeout without a terminal newline char) ')
+                print_warning('Your new test is missing a terminal newline '
+                              'character. Add one now? [y/n] (your test will '
+                              'likely timeout without a terminal newline '
+                              'char) ', end='')
+                inp = input()
                 if inp == 'y':
                     new_test += '\\n'
                     break
