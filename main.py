@@ -137,8 +137,8 @@ def create_submitter_if_needed(name):
                  known_good='t' if name.startswith('good_') else 'f')
 
 
-def run_cur_level_tests():
-    leveldir = f'{config.SUBSDIR}/{level}'
+def run_level_tests(lev):
+    leveldir = f'{config.SUBSDIR}/{lev}'
     names = os.listdir(leveldir)
 
     if len(names) == 0:
@@ -146,9 +146,9 @@ def run_cur_level_tests():
                    'directory before trying again.')
         return
 
-    tests_q = db.Test.select().where(db.Test.level == level)
+    tests_q = db.Test.select().where(db.Test.level == lev)
     if tests_q.count() == 0:
-        print_fail(f'There are no tests at level {level}')
+        print_fail(f'There are no tests at level {lev}')
         return
 
     good_names = [n for n in names if n.startswith('good_')]
@@ -160,7 +160,7 @@ def run_cur_level_tests():
     for name in good_names:
         create_submitter_if_needed(name)
         for test in tests_q:
-            res = db.Result.get_or_create(submitter=name, level=level, test=test)[0]  # NOQA: 501
+            res = db.Result.get_or_create(submitter=name, level=lev, test=test)[0]  # NOQA: 501
             out = run_test(f'{leveldir}/{name}',
                            test.test_text.replace('\\n', '\n'))
             res.stdout, res.stderr, res.timedout = out
@@ -175,7 +175,7 @@ def run_cur_level_tests():
     for name in [n for n in names if not n.startswith('good_')]:
         create_submitter_if_needed(name)
         for test in tests_q:
-            res = db.Result.get_or_create(submitter=name, level=level, test=test)[0] # NOQA: 501
+            res = db.Result.get_or_create(submitter=name, level=lev, test=test)[0] # NOQA: 501
             out = run_test(f'{leveldir}/{name}',
                            test.test_text.replace('\\n', '\n'))
             res.stdout, res.stderr, res.timedout = out
@@ -201,7 +201,7 @@ new_tests = State('add [n]ew tests to the current level', action=add_tests)
 tests_printer = State('list all of the [tests] at the current level',
                       action=print_tests)
 run_tests = State('[r]un all tests at this level against all binaries',
-                  action=run_cur_level_tests)
+                  action=lambda: run_level_tests(level))
 end = State('[q]uit this program', stop=True)
 
 begin.add_connections([level_select, end])
