@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 
 import config
+import errno
 import os
 import peewee
+import pty
+import select
+import subprocess
+import time
 
 import db
 
@@ -76,19 +81,100 @@ def show_level():
     print_header(f'Currently selected level: {level}')
 
 
+# Capture the output of cmd with bytes_input to stdin,
+# with stdin, stdout and stderr as TTYs.
+# From Andy Hayden's capture_tty.py:
+# https://gist.github.com/hayd/4f46a68fc697ba8888a7b517a414583e:
+def tty_capture(cmd, bytes_input, output_bytes=2048):
+    mo, so = pty.openpty()  # provide tty to enable line-buffering
+    me, se = pty.openpty()
+    mi, si = pty.openpty()
+
+    p = subprocess.Popen(
+        cmd,
+        bufsize=0, stdin=si, stdout=so, stderr=se,
+        close_fds=True)
+    for fd in [so, se, si]:
+        os.close(fd)
+    os.write(mi, bytes_input)
+
+    timeout = 0.32  # seconds
+    timed = False
+    readable = [mo, me]
+    result = {mo: b'', me: b''}
+    tm = time.time()
+    try:
+        while readable:
+            if time.time() - tm > timeout:
+                timed = True
+                break
+            ready, _, _ = select.select(readable, [], [], timeout)
+            for fd in ready:
+                try:
+                    data = os.read(fd, output_bytes)
+                except OSError as e:
+                    if e.errno != errno.EIO:
+                        raise
+                    # EIO means EOF on some systems
+                    readable.remove(fd)
+                else:
+                    if not data:  # EOF
+                        readable.remove(fd)
+                    result[fd] += data
+    finally:
+        for fd in [mo, me, mi]:
+            os.close(fd)
+        if p.poll() is None:
+            p.kill()
+        p.wait()
+    return result[mo], result[me], timed
+
+
+def create_submitter_if_needed(name):
+    S = db.Submitter
+    if not S.get_or_none(db.Submitter.name == name):
+        S.create(name=name,
+                 known_good='t' if name.startswith('good_') else 'f')
+
+
+def run_cur_level_tests():
+    leveldir = f'{config.SUBSDIR}/{level}'
+    names = os.listdir(leveldir)
+
+    tests_q = db.Test.select().where(db.Test.level == level)
+
+    for name in names:
+        create_submitter_if_needed(name)
+        for test in tests_q:
+            res = db.Result.get_or_create(submitter=name, level=level, test=test)[0]  # NOQA: 501
+            out = run_test(f'{leveldir}/{name}',
+                           test.test_text.replace('\\n', '\n'))
+            res.stdout, res.stderr, res.timedout = out
+            res.save()
+
+
+def run_test(bin_path, test):
+    res = tty_capture(bin_path, bytes(test, 'utf-8'))
+    return [res[0].decode('utf-8'), res[1].decode('utf-8'), res[2]]
+
+
 begin = State('return to the [m]ain menu of this program')
 level_select = State('select a [l]evel to grade', action=select_level)
 at_level = State('[v]iew possible actions at current level', action=show_level)
 new_tests = State('add [n]ew tests to the current level', action=add_tests)
 tests_printer = State('list all of the [tests] at the current level',
                       action=print_tests)
+run_tests = State('[r]un all tests at this level against all binaries',
+                  action=run_cur_level_tests)
 end = State('[q]uit this program', stop=True)
 
 begin.add_connections([level_select, end])
 level_select.add_connection(at_level)
-at_level.add_connections([level_select, new_tests, tests_printer, end])
+at_level.add_connections([level_select, run_tests, new_tests, tests_printer,
+                         end])
 new_tests.add_connection(at_level)
 tests_printer.add_connection(at_level)
+run_tests.add_connection(at_level)
 
 cur_state = begin
 while not cur_state.stop:
