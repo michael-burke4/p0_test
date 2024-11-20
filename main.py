@@ -8,7 +8,7 @@ import db
 
 from preflight_checks import check_everything
 from print_color import print_fail, print_header, print_warning, print_okblue
-from sm import Connection, State
+from sm import State
 
 
 level = None
@@ -74,25 +74,19 @@ def show_level():
     print_header(f'Currently selected level: {level}')
 
 
-begin = State()
-level_select = State(action=select_level)
-at_level = State(action=show_level)
-new_tests = State(action=add_tests)
-test_printer = State(action=print_tests)
-end = State(stop=True)
+begin = State('return to the [m]ain menu of this program')
+level_select = State('select a [l]evel to grade', action=select_level)
+at_level = State('[v]iew possible actions at current level', action=show_level)
+new_tests = State('add [n]ew tests to the current level', action=add_tests)
+tests_printer = State('list all of the [tests] at the current level',
+                      action=print_tests)
+end = State('[q]uit this program', stop=True)
 
-q = Connection('[q]uit this program', end)
-to_level_select = Connection('select a [l]evel to grade', level_select)
-to_new_tests = Connection('add [n]ew tests to the current level', new_tests)
-to_at_level = Connection('return to [c]urrent level menu', at_level)
-to_test_printer = Connection('[li]st all of the tests at the current level',
-                             test_printer)
-
-begin.add_connections([to_level_select, q])
-level_select.add_connection(to_at_level)
-at_level.add_connections([to_level_select, to_new_tests, to_test_printer, q])
-new_tests.add_connection(to_at_level)
-test_printer.add_connection(to_at_level)
+begin.add_connections([level_select, end])
+level_select.add_connection(at_level)
+at_level.add_connections([level_select, new_tests, tests_printer, end])
+new_tests.add_connection(at_level)
+tests_printer.add_connection(at_level)
 
 cur_state = begin
 while not cur_state.stop:
