@@ -143,13 +143,35 @@ def run_cur_level_tests():
 
     tests_q = db.Test.select().where(db.Test.level == level)
 
-    for name in names:
+    for name in [n for n in names if n.startswith('good_')]:
         create_submitter_if_needed(name)
         for test in tests_q:
             res = db.Result.get_or_create(submitter=name, level=level, test=test)[0]  # NOQA: 501
             out = run_test(f'{leveldir}/{name}',
                            test.test_text.replace('\\n', '\n'))
             res.stdout, res.stderr, res.timedout = out
+            res.save()
+
+    good_rs = (db.Result.select()
+                        .join(db.Submitter)
+                        .switch()
+                        .join(db.Test, peewee.JOIN.LEFT_OUTER)
+                        .where(db.Result.submitter.known_good == 't'))
+
+    for name in [n for n in names if not n.startswith('good_')]:
+        create_submitter_if_needed(name)
+        for test in tests_q:
+            res = db.Result.get_or_create(submitter=name, level=level, test=test)[0] # NOQA: 501
+            out = run_test(f'{leveldir}/{name}',
+                           test.test_text.replace('\\n', '\n'))
+            res.stdout, res.stderr, res.timedout = out
+            res.save()
+            test_good_rs = good_rs.where(db.Result.test == test)
+            g_match = (test_good_rs.where(db.Result.stdout == res.stdout)
+                                   .where(db.Result.stderr == res.stderr)
+                                   .where(db.Result.timedout == res.timedout)
+                                   .first())
+            res.good_match = g_match
             res.save()
 
 
