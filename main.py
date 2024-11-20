@@ -24,7 +24,7 @@ def select_level():
     global level
     while True:
         print_header('Select a level to grade... ')
-        for f in os.listdir(config.SUBSDIR):
+        for f in sorted(os.listdir(config.SUBSDIR)):
             print(f'\t{f}')
         inp = input('')
         if inp in os.listdir(config.SUBSDIR):
