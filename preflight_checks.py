@@ -15,6 +15,11 @@ def check_everything():
         print_fail('Create this directory and populate it before running '
                    'again...')
         return False
+    if len(os.listdir(config.SUBSDIR)) == 0:
+        print_fail(f'Submissions directory "{config.SUBSDIR}" is empty!')
+        print_fail('Populate this directory before running again...')
+        return False
+
     return True
 
 
