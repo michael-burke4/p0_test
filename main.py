@@ -18,6 +18,7 @@ from sm import State
 
 
 level = None
+user = None
 
 if not check_everything():
     exit(1)
@@ -194,7 +195,11 @@ def run_level_tests(lev):
 
 def run_test(bin_path, test):
     res = tty_capture(bin_path, bytes(test, 'utf-8'))
-    return [res[0].decode('utf-8'), res[1].decode('utf-8'), res[2]]
+
+    def clean(s):
+        return s.decode('utf-8').replace('\r\n', '\\n').replace('\n', '\\n')
+
+    return [clean(res[0]), clean(res[1]), res[2]]
 
 
 def run_all_tests():
@@ -214,9 +219,60 @@ def print_level_report():
         for res in results:
             prfx = f'\tTest id {res.test}:'
             if res.good_match:
-                print_okgreen(f'{prfx} output matches {res.good_match.submitter}')
+                print_okgreen(f'{prfx} output matches '
+                              f'{res.good_match.submitter}')
             else:
                 print_fail(f'{prfx} has no known-good matching output!')
+
+
+def pick_a_user():
+    global user
+    q = db.Submitter.select().where(db.Submitter.known_good == 'f')
+    for u in q:
+        print(u.name)
+
+    while True:
+        print_header('Pick a user from the above list')
+        prompted = input('')
+        if sel := q.where(db.Submitter.name == prompted).first():
+            user = sel.name
+            print_okgreen(f'Selected {user}')
+            break
+        print('Selected user was not in the above list! Try again...')
+
+
+def inspect_user(usr, lev):
+    print_header(f'Inspecting {usr}')
+    l_ts = db.Level.get_or_none(name=lev).tests
+    if l_ts.count() == 0:
+        print_fail('No tests at this level! Nothing to inspect...')
+        return
+    for t in l_ts:
+        print_report(usr, t)
+
+
+def print_report(usr, test):
+    usr_t_res = (db.Result.select()
+                          .where(db.Result.test == test)
+                          .where(db.Result.submitter == usr)
+                          .first())
+    print_okblue(f'\tTest input: {test.test_text}')
+    if not usr_t_res:
+        print_fail('\t\tNo results for this test! Maybe re-run tests at '
+                   f'level {test.level}?')
+        return
+    print(f'\t\tstdout: {usr_t_res.stdout}')
+    print(f'\t\tstderr: {usr_t_res.stderr}')
+    print(f'\t\ttimed out: {usr_t_res.timedout}')
+    if m := usr_t_res.good_match:
+        print_okgreen(f'\t\tOutput matches the output of {m.submitter}')
+    else:
+        print_fail('\t\tMatches no known-good outputs!')
+
+
+def pick_and_inspect():
+    pick_a_user()
+    inspect_user(user, level)
 
 
 begin = State('return to the [m]ain menu of this program')
@@ -233,6 +289,8 @@ inspect_menu = State('[i]nspect grading status of the current level\'s '
                      'submissions')
 level_report = State('print a [g]rade report for all submissions at the '
                      'current level', print_level_report)
+inspect_specific_user = State('view a specific [u]ser\'s test outputs',
+                              action=pick_and_inspect)
 end = State('[q]uit this program', stop=True)
 
 begin.add_connections([level_select, run_all_tests, end])
@@ -243,7 +301,9 @@ new_tests.add_connection(at_level)
 tests_printer.add_connection(at_level)
 run_tests.add_connection(at_level)
 run_all_tests.add_connection(begin)
-inspect_menu.add_connections([level_report, at_level, end])
+inspect_menu.add_connections([level_report, inspect_specific_user, at_level,
+                              end])
+inspect_specific_user.add_connection(inspect_menu)
 level_report.add_connection(inspect_menu)
 
 cur_state = begin
