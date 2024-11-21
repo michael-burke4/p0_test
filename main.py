@@ -66,7 +66,9 @@ def add_tests():
                     break
                 if inp == 'n':
                     break
-        if db.Test.get_or_none(test_text=new_test):
+        T = db.Test
+        sel = T.select().where(T.test_text == new_test).where(T.level == level)
+        if sel.first():
             print_warning('This is a duplicate test! Skipping...')
             continue
         db.Test.create(level=level, test_text=new_test)
