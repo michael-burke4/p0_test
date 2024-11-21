@@ -157,9 +157,8 @@ def run_level_tests(lev):
 
     good_names = [n for n in names if n.startswith('good_')]
     if len(good_names) == 0:
-        print_warning(f'No known-good binaries were found in {leveldir}. '
-                      'It will appear as though all submissions at this '
-                      'level are wrong.')
+        print_fail(f'No known-good binaries were found in {leveldir}.')
+        return
 
     for name in good_names:
         create_submitter_if_needed(name)
@@ -228,12 +227,12 @@ def print_level_report():
 def pick_a_user():
     global user
     q = db.Submitter.select().where(db.Submitter.known_good == 'f')
+    print_header('Pick a user from the following list...')
     for u in q:
         print(u.name)
 
     while True:
-        print_header('Pick a user from the above list')
-        prompted = input('')
+        prompted = input('Make a selction... ')
         if sel := q.where(db.Submitter.name == prompted).first():
             user = sel.name
             print_okgreen(f'Selected {user}')
@@ -275,21 +274,21 @@ def pick_and_inspect():
     inspect_user(user, level)
 
 
-begin = State('return to the [m]ain menu of this program')
-level_select = State('select a [l]evel to grade', action=select_level)
-at_level = State('[ret]urn to current level menu', action=show_level)
-new_tests = State('add [n]ew tests to the current level', action=add_tests)
-tests_printer = State('list all of the [tests] at the current level',
+begin = State('[m]ain menu of this program')
+level_select = State('[l]evel selection', action=select_level)
+at_level = State('[c]urrent level menu', action=show_level)
+new_tests = State('[n]ew test creation at current level', action=add_tests)
+tests_printer = State('[tests] list at current level',
                       action=print_tests)
 run_tests = State('[r]un all tests at this level against all binaries',
                   action=lambda: run_level_tests(level))
-run_all_tests = State('run [all] tests at all levels against all binaries',
+run_all_tests = State('[run all] tests at all levels against all binaries',
                       action=run_all_tests)
 inspect_menu = State('[i]nspect grading status of the current level\'s '
                      'submissions')
-level_report = State('print a [g]rade report for all submissions at the '
+level_report = State('[o]verview for all submissions at the '
                      'current level', print_level_report)
-inspect_specific_user = State('view a specific [u]ser\'s test outputs',
+inspect_specific_user = State('[v]iew a specific user\'s test outputs',
                               action=pick_and_inspect)
 end = State('[q]uit this program', stop=True)
 

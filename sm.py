@@ -29,10 +29,10 @@ class State:
             return self.connections[next(iter(self.connections))]
         inp = None
         while True:
-            print_header('Available actions:')
+            print_header('Available:')
             for s in self.connections:
                 print(f'\t{self.connections[s].command_string}')
-            inp = input('Select an action to perform... ')
+            inp = input('Proceed to... ')
             con = None
             try:
                 con = self.connections[inp]
