@@ -35,3 +35,7 @@ def print_okblue(*args, end='\n'):
 
 def print_okcyan(*args, end='\n'):
     print_color(OKCYAN, *args, end=end)
+
+
+def print_okgreen(*args, end='\n'):
+    print_color(OKGREEN, *args, end=end)
