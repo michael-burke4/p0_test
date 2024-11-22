@@ -28,7 +28,7 @@ db.db.connect()
 db.db.create_tables(peewee.Model.__subclasses__(), safe=True)
 
 
-def select_level():
+def do_select_level():
     global level
     while True:
         print_header('Select a level to grade... ')
@@ -43,7 +43,7 @@ def select_level():
             print_fail(f'{inp} not in {config.SUBSDIR}')
 
 
-def write_tests():
+def do_write_tests():
     global level
     print('When writing tests, write \\n where you intend for there to be a '
           'newline/enter character')
@@ -72,13 +72,13 @@ def add_test(lev, txt):
         print_warning('Duplicate test! Skipping...')
 
 
-def print_tests():
+def do_print_tests():
     print_okblue(f'Here are all of the tests at level {level}')
     for t in db.Test.select().where(db.Test.level == level):
         print(f'\t{t.test_text}')
 
 
-def show_level():
+def do_current_level():
     print_header(f'Currently selected level: {level}')
 
 
@@ -198,13 +198,13 @@ def run_test(bin_path, test):
     return [clean(res[0]), clean(res[1]), res[2]]
 
 
-def run_all_tests():
+def do_run_all_tests():
     print_okcyan('This may take a while...')
     for level in sorted(os.listdir(config.SUBSDIR)):
         run_level_tests(level)
 
 
-def print_level_report():
+def do_level_report():
     q = db.Submitter.select().where(db.Submitter.known_good == 'f')
     for u in q:
         print(u.name)
@@ -266,7 +266,7 @@ def print_report(usr, test):
         print_fail('\t\tMatches no known-good outputs!')
 
 
-def pick_and_inspect():
+def do_inspect_specific_user():
     pick_a_user()
     inspect_user(user, level)
 
@@ -293,36 +293,37 @@ def do_export_tests():
 
 
 begin = State('[m]ain menu of this program')
-level_select = State('[l]evel selection', action=select_level)
-at_level = State('[c]urrent level menu', action=show_level)
-new_tests = State('[n]ew test creation at current level', action=write_tests)
-tests_printer = State('[tests] list at current level',
-                      action=print_tests)
+select_level = State('[l]evel selection', action=do_select_level)
+current_level = State('[c]urrent level menu', action=do_current_level)
+write_tests = State('[n]ew test creation at current level',
+                    action=do_write_tests)
+print_tests = State('[tests] list at current level',
+                    action=do_print_tests)
 run_tests = State('[r]un all tests at this level against all binaries',
                   action=lambda: run_level_tests(level))
 run_all_tests = State('[run all] tests at all levels against all binaries',
-                      action=run_all_tests)
+                      action=do_run_all_tests)
 inspect_menu = State('[i]nspect grading status of the current level\'s '
                      'submissions')
 level_report = State('[o]verview for all submissions at the '
-                     'current level', print_level_report)
+                     'current level', do_level_report)
 inspect_specific_user = State('[v]iew a specific user\'s test outputs',
-                              action=pick_and_inspect)
+                              action=do_inspect_specific_user)
 import_tests = State('[im]port new tests', action=do_import_tests)
 export_tests = State('[ex]port tests to json', action=do_export_tests)
 end = State('[q]uit this program', stop=True)
 
-begin.add_connections([level_select, run_all_tests, import_tests, export_tests,
+begin.add_connections([select_level, run_all_tests, import_tests, export_tests,
                        end])
-level_select.add_connection(at_level)
-at_level.add_connections([level_select, run_tests, new_tests, tests_printer,
-                         inspect_menu, begin, end])
-new_tests.add_connection(at_level)
-tests_printer.add_connection(at_level)
-run_tests.add_connection(at_level)
+select_level.add_connection(current_level)
+current_level.add_connections([select_level, run_tests, write_tests,
+                              print_tests, inspect_menu, begin, end])
+write_tests.add_connection(current_level)
+print_tests.add_connection(current_level)
+run_tests.add_connection(current_level)
 run_all_tests.add_connection(begin)
-inspect_menu.add_connections([level_report, inspect_specific_user, at_level,
-                              end])
+inspect_menu.add_connections([level_report, inspect_specific_user,
+                             current_level, end])
 inspect_specific_user.add_connection(inspect_menu)
 level_report.add_connection(inspect_menu)
 import_tests.add_connection(begin)
