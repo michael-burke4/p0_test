@@ -214,7 +214,11 @@ def do_level_report():
             continue
         for res in results:
             prfx = f'\tTest id {res.test}:'
-            if res.good_match:
+            if res.okness == 'ok':
+                print_okcyan(f'{prfx} manually marked as ok')
+            elif res.okness == 'ok':
+                print_fail(f'{prfx} manually marked as NOT ok')
+            elif res.good_match:
                 print_okgreen(f'{prfx} output matches '
                               f'{res.good_match.submitter}')
             else:
@@ -257,9 +261,16 @@ def print_report(usr, test):
         print_fail('\t\tNo results for this test! Maybe re-run tests at '
                    f'level {test.level}?')
         return
+    print(f'\t\tResult ID:{usr_t_res.id}')
     print(f'\t\tstdout: {usr_t_res.stdout}')
     print(f'\t\tstderr: {usr_t_res.stderr}')
     print(f'\t\ttimed out: {usr_t_res.timedout}')
+    if usr_t_res.okness == 'ok':
+        print_okcyan(f'\t\tmanual okness: {usr_t_res.okness}')
+    elif not usr_t_res.okness:
+        print(f'\t\tmanual okness: {usr_t_res.okness}')
+    else:
+        print_fail(f'\t\tmanual okness: {usr_t_res.okness}')
     if m := usr_t_res.good_match:
         print_okgreen(f'\t\tOutput matches the output of {m.submitter}')
     else:
@@ -292,6 +303,29 @@ def do_export_tests():
         json.dump(out, f)
 
 
+def do_okness():
+    while True:
+        print_header('Input the result ID of the result to mark as not-ok: ',
+                     end='')
+        inp = input()
+
+        if r := db.Result.get_or_none(id=inp):
+            break
+    while True:
+        print_header('Mark as [ok]/[not] ok/[rem]ove manual ok mark: ', end='')
+        inp = input()
+        if inp == 'ok':
+            r.okness = 'ok'
+            break
+        elif inp == 'not':
+            r.okness = 'not_ok'
+            break
+        elif inp == 'rem':
+            r.okness = None
+            break
+    r.save()
+
+
 begin = State('[m]ain menu of this program')
 select_level = State('[l]evel selection', action=do_select_level)
 current_level = State('[c]urrent level menu', action=do_current_level)
@@ -311,6 +345,7 @@ inspect_specific_user = State('[v]iew a specific user\'s test outputs',
                               action=do_inspect_specific_user)
 import_tests = State('[im]port new tests', action=do_import_tests)
 export_tests = State('[ex]port tests to json', action=do_export_tests)
+okness = State('[ok] mark a result as ok/not ok', action=do_okness)
 end = State('[q]uit this program', stop=True)
 
 begin.add_connections([select_level, run_all_tests, import_tests, export_tests,
@@ -324,8 +359,10 @@ run_tests.add_connection(current_level)
 run_all_tests.add_connection(begin)
 inspect_menu.add_connections([level_report, inspect_specific_user,
                              current_level, end])
-inspect_specific_user.add_connection(inspect_menu)
+inspect_specific_user.add_connections([okness, inspect_menu, select_level,
+                                      end])
 level_report.add_connection(inspect_menu)
+okness.add_connection(inspect_menu)
 import_tests.add_connection(begin)
 export_tests.add_connection(begin)
 
