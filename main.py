@@ -348,23 +348,25 @@ export_tests = State('[ex]port tests to json', action=do_export_tests)
 okness = State('[ok] mark a result as ok/not ok', action=do_okness)
 end = State('[q]uit this program', stop=True)
 
+
 begin.add_connections([select_level, run_all_tests, import_tests, export_tests,
                        end])
+run_all_tests.add_connection(begin)
+import_tests.add_connection(begin)
+export_tests.add_connection(begin)
+
 select_level.add_connection(current_level)
-current_level.add_connections([select_level, run_tests, write_tests,
-                              print_tests, inspect_menu, begin, end])
+current_level.add_connections([run_tests, write_tests, print_tests,
+                              inspect_menu, select_level, begin, end])
 write_tests.add_connection(current_level)
 print_tests.add_connection(current_level)
 run_tests.add_connection(current_level)
-run_all_tests.add_connection(begin)
 inspect_menu.add_connections([level_report, inspect_specific_user,
                              current_level, end])
 inspect_specific_user.add_connections([okness, inspect_menu, select_level,
                                       end])
 level_report.add_connection(inspect_menu)
 okness.add_connection(inspect_menu)
-import_tests.add_connection(begin)
-export_tests.add_connection(begin)
 
 cur_state = begin
 while not cur_state.stop:
