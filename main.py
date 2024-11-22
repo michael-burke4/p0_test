@@ -2,6 +2,7 @@
 
 import config
 import errno
+import json
 import os
 import peewee
 import pty
@@ -42,12 +43,8 @@ def select_level():
             print_fail(f'{inp} not in {config.SUBSDIR}')
 
 
-def add_tests():
+def write_tests():
     global level
-    if not db.Level.get_or_none(name=level):
-        db.Level.create(name=level)
-        print_warning(f'Level {level} did not exist in the grading db. '
-                      'It has been added automatically.')
     print('When writing tests, write \\n where you intend for there to be a '
           'newline/enter character')
     while True:
@@ -67,12 +64,12 @@ def add_tests():
                     break
                 if inp == 'n':
                     break
-        T = db.Test
-        sel = T.select().where(T.test_text == new_test).where(T.level == level)
-        if sel.first():
-            print_warning('This is a duplicate test! Skipping...')
-            continue
-        db.Test.create(level=level, test_text=new_test)
+        add_test(level, new_test)
+
+
+def add_test(lev, txt):
+    if not db.Test.get_or_create(level=lev, test_text=txt)[1]:
+        print_warning('Duplicate test! Skipping...')
 
 
 def print_tests():
@@ -274,10 +271,31 @@ def pick_and_inspect():
     inspect_user(user, level)
 
 
+def do_import_tests():
+    inp = input('Enter the path to the json file containing your tests: ')
+    with open(inp) as f:
+        tests_json = json.load(f)
+    for lev in tests_json:
+        for t in tests_json[lev]:
+            add_test(lev, t.replace('\r\n', '\\n').replace('\n', '\\n'))
+
+
+def do_export_tests():
+    inp = input('Enter the path to export to: ')
+    out = {}
+    levs = db.Level.select()
+    for lev in levs:
+        out[lev.name] = []
+        for t in lev.tests:
+            out[lev.name].append(t.test_text.replace('\\n', '\n'))
+    with open(inp, 'w') as f:
+        json.dump(out, f)
+
+
 begin = State('[m]ain menu of this program')
 level_select = State('[l]evel selection', action=select_level)
 at_level = State('[c]urrent level menu', action=show_level)
-new_tests = State('[n]ew test creation at current level', action=add_tests)
+new_tests = State('[n]ew test creation at current level', action=write_tests)
 tests_printer = State('[tests] list at current level',
                       action=print_tests)
 run_tests = State('[r]un all tests at this level against all binaries',
@@ -290,9 +308,12 @@ level_report = State('[o]verview for all submissions at the '
                      'current level', print_level_report)
 inspect_specific_user = State('[v]iew a specific user\'s test outputs',
                               action=pick_and_inspect)
+import_tests = State('[im]port new tests', action=do_import_tests)
+export_tests = State('[ex]port tests to json', action=do_export_tests)
 end = State('[q]uit this program', stop=True)
 
-begin.add_connections([level_select, run_all_tests, end])
+begin.add_connections([level_select, run_all_tests, import_tests, export_tests,
+                       end])
 level_select.add_connection(at_level)
 at_level.add_connections([level_select, run_tests, new_tests, tests_printer,
                          inspect_menu, begin, end])
@@ -304,6 +325,8 @@ inspect_menu.add_connections([level_report, inspect_specific_user, at_level,
                               end])
 inspect_specific_user.add_connection(inspect_menu)
 level_report.add_connection(inspect_menu)
+import_tests.add_connection(begin)
+export_tests.add_connection(begin)
 
 cur_state = begin
 while not cur_state.stop:
