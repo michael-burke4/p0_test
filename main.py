@@ -75,7 +75,7 @@ def add_test(lev, txt):
 def do_print_tests():
     print_okblue(f'Here are all of the tests at level {level}')
     for t in db.Test.select().where(db.Test.level == level):
-        print(f'\t{t.test_text}')
+        print(f'id:{t.id}\t{t.test_text}')
 
 
 def do_current_level():
@@ -323,7 +323,26 @@ def do_okness():
         elif inp == 'rem':
             r.okness = None
             break
+        elif inp == 'c':
+            return
     r.save()
+
+
+def do_remove_tests():
+    while True:
+        do_print_tests()
+        print_header('Input the ID of the test to remove (or [c]ancel:) ')
+        print_warning('WARNING: this will also delete all results '
+                      'for this test!')
+        inp = input()
+        if inp == 'c':
+            return
+
+        if r := db.Test.get_or_none(id=inp):
+            (db.Result.delete()
+                      .where(db.Result.test == r)
+                      .execute())
+            r.delete_instance()
 
 
 begin = State('[m]ain menu of this program')
@@ -331,6 +350,7 @@ select_level = State('[l]evel selection', action=do_select_level)
 current_level = State('[c]urrent level menu', action=do_current_level)
 write_tests = State('[n]ew test creation at current level',
                     action=do_write_tests)
+remove_tests = State('[rem]ove tests', action=do_remove_tests)
 print_tests = State('[tests] list at current level',
                     action=do_print_tests)
 run_tests = State('[r]un all tests at this level against all binaries',
@@ -356,9 +376,11 @@ import_tests.add_connection(begin)
 export_tests.add_connection(begin)
 
 select_level.add_connection(current_level)
-current_level.add_connections([run_tests, write_tests, print_tests,
-                              inspect_menu, select_level, begin, end])
+current_level.add_connections([run_tests, write_tests, remove_tests,
+                              print_tests, inspect_menu, select_level,
+                              begin, end])
 write_tests.add_connection(current_level)
+remove_tests.add_connection(current_level)
 print_tests.add_connection(current_level)
 run_tests.add_connection(current_level)
 inspect_menu.add_connections([level_report, inspect_specific_user,
