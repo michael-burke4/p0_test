@@ -310,11 +310,11 @@ def print_report(usr, test):
     print(f'\texit code: {usr_t_res.exit_code}')
     print(f'\ttimed out: {usr_t_res.timedout}')
     if usr_t_res.okness == 'manual_ok' or usr_t_res.okness == 'match_ok':
-        print_okgreen(f'\tmanual okness: {usr_t_res.okness}')
+        print_okgreen(f'\tokness: {usr_t_res.okness}')
     elif not usr_t_res.okness:
         print_warning('\tUngraded!')
     else:
-        print_fail(f'\tmanual okness: {usr_t_res.okness}')
+        print_fail(f'\tokness: {usr_t_res.okness}')
 
 
 def do_inspect_specific_user():
@@ -398,11 +398,10 @@ run_tests = State('[r]un tests at this level against binaries where results '
 grade_level = State('[g]rade results at this level', action=do_grade_level)
 run_all_tests = State('[run all] tests at all levels against all binaries',
                       action=do_run_all_tests)
-inspect_menu = State('[i]nspect grading status of the current level\'s '
-                     'submissions')
+view_menu = State('[v]iew grading results at the current level')
 level_report = State('[o]verview for all submissions at the '
                      'current level', do_level_report)
-inspect_specific_user = State('[v]iew a specific user\'s test outputs',
+inspect_specific_user = State('[i]spect a specific user\'s test outputs',
                               action=do_inspect_specific_user)
 import_tests = State('[im]port new tests', action=do_import_tests)
 export_tests = State('[ex]port tests to json', action=do_export_tests)
@@ -418,19 +417,18 @@ import_tests.add_connection(begin)
 export_tests.add_connection(begin)
 
 select_level.add_connection(current_level)
-current_level.add_connections([run_tests, grade_level, write_tests,
-                              remove_tests, print_tests, inspect_menu,
+current_level.add_connections([run_tests, grade_level, view_menu,
+                              write_tests, remove_tests, print_tests,
                               select_level, begin, end])
 write_tests.add_connection(current_level)
 remove_tests.add_connection(current_level)
 print_tests.add_connection(current_level)
 run_tests.add_connection(current_level)
-inspect_menu.add_connections([level_report, inspect_specific_user,
-                             current_level, end])
-inspect_specific_user.add_connections([okness, inspect_menu, select_level,
-                                      end])
-level_report.add_connection(inspect_menu)
-okness.add_connection(inspect_menu)
+view_menu.add_connections([level_report, inspect_specific_user,
+                          okness, current_level, end])
+inspect_specific_user.add_connection(view_menu)
+level_report.add_connection(view_menu)
+okness.add_connection(view_menu)
 
 cur_state = begin
 while not cur_state.stop:
