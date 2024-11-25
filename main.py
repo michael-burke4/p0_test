@@ -120,6 +120,7 @@ def tty_capture(cmd, bytes_input, output_bytes=2048):
     readable = [mo, me]
     result = {mo: b'', me: b''}
     tm = time.time()
+    exit_code = None
     try:
         while readable:
             if time.time() - tm > timeout:
@@ -143,8 +144,8 @@ def tty_capture(cmd, bytes_input, output_bytes=2048):
             os.close(fd)
         if p.poll() is None:
             p.kill()
-        p.wait()
-    return result[mo], result[me], timed
+        exit_code = p.wait()
+    return result[mo], result[me], timed, exit_code
 
 
 def create_submitter_if_needed(name):
@@ -179,7 +180,7 @@ def run_level_tests(lev):
             res = db.Result.get_or_create(submitter=name, level=lev, test=test)[0]  # NOQA: 501
             out = run_test(f'{leveldir}/{name}',
                            test.test_text.replace('\\n', '\n'))
-            res.stdout, res.stderr, res.timedout = out
+            res.stdout, res.stderr, res.timedout, res.exit_code = out
             res.save()
 
     good_rs = (db.Result.select()
@@ -194,12 +195,13 @@ def run_level_tests(lev):
             res = db.Result.get_or_create(submitter=name, level=lev, test=test)[0] # NOQA: 501
             out = run_test(f'{leveldir}/{name}',
                            test.test_text.replace('\\n', '\n'))
-            res.stdout, res.stderr, res.timedout = out
+            res.stdout, res.stderr, res.timedout, res.exit_code = out
             res.save()
             test_good_rs = good_rs.where(db.Result.test == test)
             g_match = (test_good_rs.where(db.Result.stdout == res.stdout)
                                    .where(db.Result.stderr == res.stderr)
                                    .where(db.Result.timedout == res.timedout)
+                                   .where(db.Result.exit_code == res.exit_code)
                                    .first())
             res.good_match = g_match
             res.save()
@@ -211,7 +213,7 @@ def run_test(bin_path, test):
     def clean(s):
         return s.decode('utf-8').replace('\r\n', '\\n').replace('\n', '\\n')
 
-    return [clean(res[0]), clean(res[1]), res[2]]
+    return [clean(res[0]), clean(res[1]), res[2], res[3]]
 
 
 def do_run_all_tests():
@@ -280,6 +282,7 @@ def print_report(usr, test):
     print(f'\t\tResult ID:{usr_t_res.id}')
     print(f'\t\tstdout: {usr_t_res.stdout}')
     print(f'\t\tstderr: {usr_t_res.stderr}')
+    print(f'\t\texit code: {usr_t_res.exit_code}')
     print(f'\t\ttimed out: {usr_t_res.timedout}')
     if usr_t_res.okness == 'ok':
         print_okcyan(f'\t\tmanual okness: {usr_t_res.okness}')

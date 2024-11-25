@@ -39,7 +39,7 @@ class Result(peewee.Model):
     stderr = peewee.TextField(null=True)
     timedout = peewee.CharField(choices=[('t', 'True'), ('f', 'False')],
                                 null=True)
-
+    exit_code = peewee.IntegerField(null=True)
     good_match = peewee.ForeignKeyField('self', null=True, backref='matches')
 
     okness = peewee.CharField(choices=[('ok', 'OK'),
