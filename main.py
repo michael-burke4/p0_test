@@ -12,17 +12,32 @@ import time
 
 import db
 
-from preflight_checks import check_everything
 from print_color import (print_fail, print_header, print_warning, print_okblue,
                          print_okcyan, print_okgreen)
 from sm import State
 
 
+if not os.path.isdir(config.GRADINGDIR):
+    print_fail(f'Grading directory "{config.GRADINGDIR}" does not exist!')
+    print_fail(f'Create this directory and populate the submissions '
+               f'directory ({config.SUBSDIR}) before running again...')
+    exit(1)
+
+if not os.path.isdir(config.SUBSDIR):
+    print_fail(f'Submissions directory "{config.SUBSDIR}" does not exist!')
+    print_fail('Create this directory and populate it before running '
+               'again...')
+    exit(1)
+
+if len(os.listdir(config.SUBSDIR)) == 0:
+    print_fail(f'Submissions directory "{config.SUBSDIR}" is empty!')
+    print_fail('Populate this directory before running again...')
+    exit(1)
+
+
 level = None
 user = None
 
-if not check_everything():
-    exit(1)
 
 db.db.connect()
 db.db.create_tables(peewee.Model.__subclasses__(), safe=True)
