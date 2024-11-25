@@ -309,6 +309,8 @@ def print_report(usr, test):
     print(f'\tstderr: {usr_t_res.stderr}')
     print(f'\texit code: {usr_t_res.exit_code}')
     print(f'\ttimed out: {usr_t_res.timedout}')
+    if usr_t_res.okness.startswith('match_'):
+        print(f'\tOutput matches result with id {usr_t_res.out_match}')
     if usr_t_res.okness == 'manual_ok' or usr_t_res.okness == 'match_ok':
         print_okgreen(f'\tokness: {usr_t_res.okness}')
     elif not usr_t_res.okness:
