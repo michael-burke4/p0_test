@@ -165,11 +165,14 @@ def run_level_tests(lev):
     for name in names:
         db.Submitter.get_or_create(name=name)
         for test in tests_q:
+            if db.Result.get_or_none(level=level, submitter=name, test=test):
+                continue
             res = db.Result.get_or_create(submitter=name, level=lev, test=test)[0] # NOQA: 501
             out = run_test(f'{leveldir}/{name}',
                            test.test_text.replace('\\n', '\n'))
             res.stdout, res.stderr, res.timedout, res.exit_code = out
             res.save()
+    print_okcyan("Done!")
 
 
 def run_test(bin_path, test):
@@ -179,6 +182,61 @@ def run_test(bin_path, test):
         return s.decode('utf-8').replace('\r\n', '\\n').replace('\n', '\\n')
 
     return [clean(res[0]), clean(res[1]), res[2], res[3]]
+
+
+def do_grade_level():
+    R = db.Result
+    res_at_lev = (R.select()
+                   .where(R.level == level))
+    tests = db.Level.get_or_none(name=level).tests
+    for t in tests:
+        u_at_t = res_at_lev.where(R.test == t)
+        for r in u_at_t:
+            if r.okness:
+                continue
+            print_report(r.submitter, t)
+            mtch = (u_at_t.select()
+                          .where(R.submitter != r.submitter)
+                          .where(R.stdout == r.stdout)
+                          .where(R.stderr == r.stderr)
+                          .where(R.timedout == r.timedout)
+                          .where(R.exit_code == r.exit_code))
+            okmtch = mtch.where((R.okness == 'manual_ok') | (r.okness == 'match_ok')).first()  # NOQA: 501
+            nokmtch = mtch.where((R.okness == 'manual_not_ok') | (r.okness == 'match_not_ok')).first()  # NOQA: 501
+            if okmtch:
+                if nokmtch:
+                    print_fail('Result has both an OK and a Not Ok match!')
+                else:
+                    r.okness = 'match_ok'
+                    r.out_match = okmtch
+                    r.save()
+                    print_okgreen(f'Found an existing OK match: {okmtch}. '
+                                  'Automatically marking as ok...')
+                    continue
+            elif nokmtch:
+                r.okness = 'match_not_ok'
+                r.out_match = nokmtch
+                r.save()
+                print_fail(f'Found an existing not ok match: {okmtch}. '
+                           'Automatically marking as not ok...')
+                continue
+            while True:
+                print_header('[o]k, [n]ot ok, [s]kip for now, or [e]xit '
+                             'this grading menu: ')
+                inp = input()
+                if inp == 'o':
+                    r.okness = 'manual_ok'
+                    r.save()
+                    break
+                elif inp == 'n':
+                    r.okness = 'manual_not_ok'
+                    r.save()
+                    break
+                elif inp == 's':
+                    break
+                elif inp == 'e':
+                    return
+    print_okcyan("Done!")
 
 
 def do_run_all_tests():
@@ -201,12 +259,13 @@ def do_level_report():
                 print_okgreen(f'{prfx} manually marked as ok')
             elif res.okness == 'manual_not_ok':
                 print_fail(f'{prfx} manually marked as NOT ok')
-            if res.okness == 'match_ok':
+            elif res.okness == 'match_ok':
                 print_okgreen(f'{prfx} automatically marked as ok')
             elif res.okness == 'match_not_ok':
                 print_fail(f'{prfx} automatically marked as NOT ok')
             else:
                 print_warning(f'{prfx} ungraded!')
+
 
 def pick_a_user():
     global user
@@ -239,22 +298,23 @@ def print_report(usr, test):
                           .where(db.Result.test == test)
                           .where(db.Result.submitter == usr)
                           .first())
-    print_okblue(f'\tTest input: {test.test_text}')
+    print_okblue(f'Test input: {test.test_text}')
     if not usr_t_res:
-        print_fail('\t\tNo results for this test! Maybe re-run tests at '
+        print_fail('No results for this test! Maybe re-run tests at '
                    f'level {test.level}?')
         return
-    print(f'\t\tResult ID:{usr_t_res.id}')
-    print(f'\t\tstdout: {usr_t_res.stdout}')
-    print(f'\t\tstderr: {usr_t_res.stderr}')
-    print(f'\t\texit code: {usr_t_res.exit_code}')
-    print(f'\t\ttimed out: {usr_t_res.timedout}')
+    print(f'\tSubmitter: {usr_t_res.submitter}')
+    print(f'\tResult ID:{usr_t_res.id}')
+    print(f'\tstdout: {usr_t_res.stdout}')
+    print(f'\tstderr: {usr_t_res.stderr}')
+    print(f'\texit code: {usr_t_res.exit_code}')
+    print(f'\ttimed out: {usr_t_res.timedout}')
     if usr_t_res.okness == 'manual_ok' or usr_t_res.okness == 'match_ok':
-        print_okgreen(f'\t\tmanual okness: {usr_t_res.okness}')
+        print_okgreen(f'\tmanual okness: {usr_t_res.okness}')
     elif not usr_t_res.okness:
-        print_warning(f'\t\tUngraded!')
+        print_warning('\tUngraded!')
     else:
-        print_fail(f'\t\tmanual okness: {usr_t_res.okness}')
+        print_fail(f'\tmanual okness: {usr_t_res.okness}')
 
 
 def do_inspect_specific_user():
@@ -333,8 +393,9 @@ write_tests = State('[n]ew test creation at current level',
 remove_tests = State('[rem]ove tests', action=do_remove_tests)
 print_tests = State('[tests] list at current level',
                     action=do_print_tests)
-run_tests = State('[r]un all tests at this level against all binaries',
-                  action=lambda: run_level_tests(level))
+run_tests = State('[r]un tests at this level against binaries where results '
+                  'don\'t exist yet', action=lambda: run_level_tests(level))
+grade_level = State('[g]rade results at this level', action=do_grade_level)
 run_all_tests = State('[run all] tests at all levels against all binaries',
                       action=do_run_all_tests)
 inspect_menu = State('[i]nspect grading status of the current level\'s '
@@ -352,13 +413,14 @@ end = State('[q]uit this program', stop=True)
 begin.add_connections([select_level, run_all_tests, import_tests, export_tests,
                        end])
 run_all_tests.add_connection(begin)
+grade_level.add_connection(current_level)
 import_tests.add_connection(begin)
 export_tests.add_connection(begin)
 
 select_level.add_connection(current_level)
-current_level.add_connections([run_tests, write_tests, remove_tests,
-                              print_tests, inspect_menu, select_level,
-                              begin, end])
+current_level.add_connections([run_tests, grade_level, write_tests,
+                              remove_tests, print_tests, inspect_menu,
+                              select_level, begin, end])
 write_tests.add_connection(current_level)
 remove_tests.add_connection(current_level)
 print_tests.add_connection(current_level)
