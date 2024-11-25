@@ -148,13 +148,6 @@ def tty_capture(cmd, bytes_input, output_bytes=2048):
     return result[mo], result[me], timed, exit_code
 
 
-def create_submitter_if_needed(name):
-    S = db.Submitter
-    if not S.get_or_none(db.Submitter.name == name):
-        S.create(name=name,
-                 known_good='t' if name.startswith('good_') else 'f')
-
-
 def run_level_tests(lev):
     leveldir = f'{config.SUBSDIR}/{lev}'
     names = os.listdir(leveldir)
@@ -169,41 +162,13 @@ def run_level_tests(lev):
         print_fail(f'There are no tests at level {lev}')
         return
 
-    good_names = [n for n in names if n.startswith('good_')]
-    if len(good_names) == 0:
-        print_fail(f'No known-good binaries were found in {leveldir}.')
-        return
-
-    for name in good_names:
-        create_submitter_if_needed(name)
-        for test in tests_q:
-            res = db.Result.get_or_create(submitter=name, level=lev, test=test)[0]  # NOQA: 501
-            out = run_test(f'{leveldir}/{name}',
-                           test.test_text.replace('\\n', '\n'))
-            res.stdout, res.stderr, res.timedout, res.exit_code = out
-            res.save()
-
-    good_rs = (db.Result.select()
-                        .join(db.Submitter)
-                        .switch()
-                        .join(db.Test, peewee.JOIN.LEFT_OUTER)
-                        .where(db.Result.submitter.known_good == 't'))
-
-    for name in [n for n in names if not n.startswith('good_')]:
-        create_submitter_if_needed(name)
+    for name in names:
+        db.Submitter.get_or_create(name=name)
         for test in tests_q:
             res = db.Result.get_or_create(submitter=name, level=lev, test=test)[0] # NOQA: 501
             out = run_test(f'{leveldir}/{name}',
                            test.test_text.replace('\\n', '\n'))
             res.stdout, res.stderr, res.timedout, res.exit_code = out
-            res.save()
-            test_good_rs = good_rs.where(db.Result.test == test)
-            g_match = (test_good_rs.where(db.Result.stdout == res.stdout)
-                                   .where(db.Result.stderr == res.stderr)
-                                   .where(db.Result.timedout == res.timedout)
-                                   .where(db.Result.exit_code == res.exit_code)
-                                   .first())
-            res.good_match = g_match
             res.save()
 
 
@@ -223,7 +188,7 @@ def do_run_all_tests():
 
 
 def do_level_report():
-    q = db.Submitter.select().where(db.Submitter.known_good == 'f')
+    q = db.Submitter.select()
     for u in q:
         print(u.name)
         results = u.results.select().where(db.Result.level == level)
@@ -231,21 +196,21 @@ def do_level_report():
             print_fail('\tNo submission!')
             continue
         for res in results:
-            prfx = f'\tTest id {res.test}:'
-            if res.okness == 'ok':
-                print_okcyan(f'{prfx} manually marked as ok')
-            elif res.okness == 'ok':
+            prfx = f'\tTest id {res.test}, Result id {res.id}:'
+            if res.okness == 'manual_ok':
+                print_okgreen(f'{prfx} manually marked as ok')
+            elif res.okness == 'manual_not_ok':
                 print_fail(f'{prfx} manually marked as NOT ok')
-            elif res.good_match:
-                print_okgreen(f'{prfx} output matches '
-                              f'{res.good_match.submitter}')
+            if res.okness == 'match_ok':
+                print_okgreen(f'{prfx} automatically marked as ok')
+            elif res.okness == 'match_not_ok':
+                print_fail(f'{prfx} automatically marked as NOT ok')
             else:
-                print_fail(f'{prfx} has no known-good matching output!')
-
+                print_warning(f'{prfx} ungraded!')
 
 def pick_a_user():
     global user
-    q = db.Submitter.select().where(db.Submitter.known_good == 'f')
+    q = db.Submitter.select()
     print_header('Pick a user from the following list...')
     for u in q:
         print(u.name)
@@ -284,16 +249,12 @@ def print_report(usr, test):
     print(f'\t\tstderr: {usr_t_res.stderr}')
     print(f'\t\texit code: {usr_t_res.exit_code}')
     print(f'\t\ttimed out: {usr_t_res.timedout}')
-    if usr_t_res.okness == 'ok':
-        print_okcyan(f'\t\tmanual okness: {usr_t_res.okness}')
+    if usr_t_res.okness == 'manual_ok' or usr_t_res.okness == 'match_ok':
+        print_okgreen(f'\t\tmanual okness: {usr_t_res.okness}')
     elif not usr_t_res.okness:
-        print(f'\t\tmanual okness: {usr_t_res.okness}')
+        print_warning(f'\t\tUngraded!')
     else:
         print_fail(f'\t\tmanual okness: {usr_t_res.okness}')
-    if m := usr_t_res.good_match:
-        print_okgreen(f'\t\tOutput matches the output of {m.submitter}')
-    else:
-        print_fail('\t\tMatches no known-good outputs!')
 
 
 def do_inspect_specific_user():

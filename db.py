@@ -23,8 +23,6 @@ class Test(peewee.Model):
 
 class Submitter(peewee.Model):
     name = peewee.TextField(primary_key=True)
-    known_good = peewee.CharField(null=False,
-                                  choices=[('t', 'True'), ('f', 'False')])
 
     class Meta:
         database = db
@@ -40,10 +38,12 @@ class Result(peewee.Model):
     timedout = peewee.CharField(choices=[('t', 'True'), ('f', 'False')],
                                 null=True)
     exit_code = peewee.IntegerField(null=True)
-    good_match = peewee.ForeignKeyField('self', null=True, backref='matches')
+    out_match = peewee.ForeignKeyField('self', null=True, backref='matches')
 
-    okness = peewee.CharField(choices=[('ok', 'OK'),
-                                       ('not_ok', 'Not OK'),
+    okness = peewee.CharField(choices=[('manual_ok', 'Manually OK'),
+                                       ('manual_not_ok', 'Manually Not OK'),
+                                       ('match_ok', 'Matched OK'),
+                                       ('match_not_ok', 'Matched Not OK'),
                                        ],
                               null=True)
 
