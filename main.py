@@ -52,6 +52,7 @@ def do_select_level():
         inp = input('')
         if inp in os.listdir(config.SUBSDIR):
             level = inp
+            db.Level.get_or_create(name=level)
             print(f'Proceeding to grade level {level}...')
             break
         else:
